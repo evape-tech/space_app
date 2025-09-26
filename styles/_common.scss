@@ -1,0 +1,52 @@
+.btn-primary {
+  padding: 14px;
+
+  background: linear-gradient(188.68deg, #2ec27b 7.67%, #00954d 84.87%);
+  border-radius: 48px;
+  color: #f2f2f2;
+}
+
+.btn-primary.disabled {
+  background: #eaeff3;
+  color: #828282;
+  pointer-events: none;
+}
+
+.btn-primary.round-wrapper {
+  padding: 10px;
+  color: #4F4F4F;
+  background: #EEF2F6;
+  border: 1px solid #E0E0E0;
+}
+
+.btn-primary.round-wrapper-btn {
+  padding: 15px;
+  color: #333333;
+  background: #FBFBFB;
+  border: 2px solid #E4E6E8;
+}
+
+.btn-primary.round-wrapper-dark {
+  padding: 10px 15px;
+  color: #F2F2F2;
+  background: #2a3643;
+  border: 1px solid rgba(130, 130, 130, 0.3);
+  border-radius: 100px;
+}
+
+.btn-primary:active {
+  background: linear-gradient(0deg, #007e41, #007e41);
+  color: #f2f2f2;
+}
+
+.btn-primary.outline {
+  border: 2px solid #27AE60;
+  color: #27AE60;
+  background: #ffffff;
+}
+
+.input-primary {
+  background: #fbfbfb;
+  border: 2px solid #e4e6e8;
+  border-radius: 12px;
+}

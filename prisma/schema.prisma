@@ -1,0 +1,257 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model CpReportCbLog {
+  id             BigInt       @id @default(autoincrement())
+  apikey         String
+  cpid           String
+  cp_online      CpOnlineType
+  cmd            CmdType
+  current_status CpStatusType
+  data1          String
+  data2          String
+  data3          String
+  data4          String?
+  data5          String?
+  data6          String
+  createAt       DateTime     @default(now())
+  updatedAt      DateTime?    @updatedAt
+}
+
+enum CpStatusType {
+  Available
+  Preparing
+  Charging
+  Finishing
+}
+
+enum CmdType {
+  cmd_start_charging
+  cmd_stop_charging
+  get_cp_status
+  report_cp_status
+}
+
+enum CpOnlineType {
+  online
+  offline
+}
+
+model User {
+  id         Int          @id @default(autoincrement())
+  acc        String       @unique
+  provider   Provider
+  profile    Profile?
+  chargingTx ChargingTx[]
+  walletTx   WalletTx[]
+  orders     Order[]
+  cars       Car[]
+  isDel      Boolean      @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([acc, updatedAt(sort: Desc)])
+}
+
+model WalletTx {
+  id         Int         @id @default(autoincrement())
+  points     Int
+  txType     TxType
+  order      Order?      @relation(fields: [depositId], references: [id])
+  depositId  Int?
+  chargingTx ChargingTx? @relation(fields: [spendId], references: [id])
+  spendId    Int?
+  balance    Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime?   @updatedAt
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+
+  @@index([userId, depositId])
+}
+
+enum TxType {
+  income
+  spend
+}
+
+enum Provider {
+  phone
+  google
+  line
+}
+
+model Profile {
+  userId      Int       @id
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String?
+  mobile      String?
+  fullName    String?
+  nickName    String?
+  birth       DateTime?
+  gender      Gender?
+  city        String?
+  area        String?
+  addr        String?
+  carrierCode String?
+  updatedAt   DateTime? @updatedAt
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum OrderStatus {
+  unpaid
+  paid
+}
+
+model Car {
+  id        Int       @id @default(autoincrement())
+  brand     String
+  model     String
+  carNo     String
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Station {
+  id         Int          @id @default(autoincrement())
+  name       String?
+  parkFee    Int          @default(0)
+  feeDesc    String?
+  cps        CPile[]
+  addr       String?
+  latLng     Json?
+  parkSpace  String?
+  spaceCount Int          @default(1)
+  bizHour    Json?
+  pics       Json?
+  cctv       String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime?    @updatedAt
+  chargingTx ChargingTx[]
+
+  isDel    Boolean @default(false)
+}
+
+model CPile {
+  cpIdKey      String       @id
+  name         String?
+  kW           Float
+  gunStyle     String?
+  chargerFee   Int          @default(10)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime?    @updatedAt
+  station      Station?     @relation(fields: [stationId], references: [id])
+  stationId    Int?
+  chargingTx   ChargingTx[]
+  cpileStatus  CPileStatus?
+  portalUser   PortalUser?  @relation(fields: [portalUserId], references: [id])
+  portalUserId Int?
+  available    Boolean      @default(true)
+}
+
+model CPileStatus {
+  id             Int          @id @default(autoincrement())
+  cp_online      CpOnlineType
+  current_status CpStatusType
+  currentkWh     Float
+  eA             Float
+  eV             Float
+  cpile          CPile        @relation(fields: [cpIdKey], references: [cpIdKey], onDelete: Cascade)
+  cpIdKey        String       @unique
+  roundId        String
+  createAt       DateTime     @default(now())
+  updatedAt      DateTime?    @updatedAt
+}
+
+model ChargingTx {
+  id        Int        @id @default(autoincrement())
+  station   Station?   @relation(fields: [stationId], references: [id])
+  stationId Int?
+  cpile     CPile?     @relation(fields: [cpIdKey], references: [cpIdKey])
+  cpIdKey   String?
+  user      User?      @relation(fields: [userId], references: [id])
+  userId    Int?
+  startTime DateTime   @default(now())
+  endTime   DateTime?  @updatedAt
+  kWh       Float?
+  fee       Int?
+  roundId   String     @unique
+  walletTx  WalletTx[]
+
+  @@index([userId, roundId])
+}
+
+model Order {
+  id          Int              @id @default(autoincrement())
+  orderNo     String           @unique
+  qty         Int
+  unitPrice   Int
+  amount      Int
+  user        User             @relation(fields: [userId], references: [id])
+  userId      Int
+  paymentfb   PaymentFeedback? @relation(fields: [paymentfbId], references: [id])
+  paymentfbId Int?
+  status      OrderStatus
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime?        @updatedAt
+  walletTx    WalletTx[]
+
+  @@index([orderNo, userId])
+}
+
+model PaymentFeedback {
+  id          Int      @id @default(autoincrement())
+  orderNo     String
+  txId        String
+  txTime      DateTime
+  paymentName String
+  amount      Int
+  payway      String
+  isPaid      Boolean
+  createdAt   DateTime @default(now())
+  orders      Order[]
+
+  @@index([orderNo, txId])
+}
+
+model OrderNoSeq {
+  id    Int @id
+  seqNo Int
+}
+
+enum Role {
+  admin
+  partner
+}
+
+model PortalUser {
+  id       Int     @id @default(autoincrement())
+  acc      String  @unique
+  name     String?
+  password String
+  role     Role    @default(partner)
+  cpiles   CPile[]
+  isDel    Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([acc, updatedAt(sort: Desc)])
+}
