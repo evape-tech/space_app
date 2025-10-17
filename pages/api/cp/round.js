@@ -16,7 +16,10 @@ handler.post(async (req, res, next) => {
   //     "fee": 100
   // }
   body.startTime = new Date(); // only startup
-  // body.endTime = new Date();
+  // Generate auto roundId if not provided (using timestamp + random)
+  if (!body.roundId) {
+    body.roundId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
 
   try {
     const cpRound = await prisma.chargingTx.create({

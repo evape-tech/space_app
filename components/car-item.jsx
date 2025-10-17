@@ -21,14 +21,17 @@ const CarItem = ({ car }) => {
     router.push(path);
   };
 
-  const { brand, carNo } = car;
+  // Support both legacy shape { brand, carNo } and backend vehicles { modelName, licensePlate }
+  const displayLeft = car.brand || car.modelName || (car.brand && car.brand.name) || "";
+  const displayRight = car.carNo || car.licensePlate || "";
+
   return (
     <div className="flex h-[65px] p-[15px] border-b-2 justify-between items-center w-full bg-white">
       <div className="text-[16px] font-medium">
-        <div>{brand}</div>
+        <div>{displayLeft}</div>
       </div>
       <div>
-        <div className="text-[16px] font-medium">{carNo}</div>
+        <div className="text-[16px] font-medium">{displayRight}</div>
       </div>
     </div>
   );

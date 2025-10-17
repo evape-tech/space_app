@@ -69,10 +69,25 @@ handler.post(async (req, res, next) => {
             kWh: statusData.currentkWh,
           };
 
-          // round
+          // Find the open charging transaction for this cp
+          const openChargingTx = await prisma.chargingTx.findFirst({
+            where: {
+              cpIdKey: statusData.cpIdKey,
+              endTime: null,
+            },
+            orderBy: {
+              startTime: 'desc',
+            },
+          });
+
+          if (!openChargingTx) {
+            throw new Error(`No open charging transaction found for cpId: ${statusData.cpIdKey}`);
+          }
+
+          // round - update the open transaction
           const cpRound = await prisma.chargingTx.update({
             where: {
-              roundId: statusData.roundId,
+              id: openChargingTx.id,
             },
             data: endupBody,
           });

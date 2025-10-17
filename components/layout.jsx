@@ -36,7 +36,7 @@ export default function Layout({
   }
 
   if (status === "authenticated") {
-    const { userId, cpid, rid, appPath } = getUserStatus()
+    const { userId, cpid, appPath } = getUserStatus()
     if (userId) {
       const { id: currentUserId } = data.user
       if ((userId !== currentUserId)) {
@@ -44,7 +44,6 @@ export default function Layout({
         setUserStatus({
           userId,
           cpid: null,
-          rid: null,
           appPath: "/cpop/station-map"
         })
         if (asPath !== appPath) {
@@ -54,7 +53,7 @@ export default function Layout({
       }
       else // same userId. 
       {
-        if (appPath === "/cpop/cpop-charging" && cpid && rid) {
+        if (appPath === "/cpop/cpop-charging" && cpid) {
           if (asPath !== appPath) {
             console.log('push', appPath);
             router.push(appPath)

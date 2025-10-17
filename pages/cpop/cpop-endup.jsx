@@ -4,18 +4,17 @@ import styles from "@/styles/verify-code.module.scss";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
-import { cpRoundCheckout } from "@/client-api/cp";
 import { getUserStatus } from '@/utils/storeTool'
 import { payPointFee } from "@/client-api/user";
 import { useSession } from "next-auth/react";
 import { getLastRecharge } from "@/client-api/recharge";
 import dayjs from "dayjs";
 import { updateUserStatus } from "@/utils/storeTool";
+import request from "@/utils/request";
 
 const CpopEndup = () => {
   const router = useRouter();
   const cpId = useRef(null);
-  const roundId = useRef(null);
   const [endupData, setEndupData] = useState(null);
 
   //   {
@@ -39,7 +38,11 @@ const CpopEndup = () => {
 
   const checkoutSummery = () => {
     return new Promise((resolve, reject) => {
-      cpRoundCheckout(roundId.current)
+      // Get the latest completed charging transaction for this cp and user
+      request({
+        url: `/cp/checkout-by-cp/${cpId.current}?userId=${userId}`,
+        method: "get",
+      })
         .then(async (rsp) => {
           resolve(rsp);
         })
@@ -54,15 +57,13 @@ const CpopEndup = () => {
     setTimeout(async () => {
       let state = await checkoutSummery();
       setEndupData(state);
-      updateUserStatus({ rid: null }) // cleanRound
     }, 500);
   };
 
   useEffect(() => {
-    const { cpid, rid } = getUserStatus()
+    const { cpid } = getUserStatus()
 
     if (cpid) cpId.current = cpid;
-    if (rid) roundId.current = rid;
 
     fetchEndupData();
   }, []);

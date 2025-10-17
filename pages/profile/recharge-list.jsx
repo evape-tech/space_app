@@ -4,17 +4,13 @@ import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
 import RechargeItem from "@/components/recharge-item";
-import ProfileBanner from "@/image/icons/profile-banner.svg";
-import { getRecharges, getLastRecharge } from "@/client-api/recharge";
+import { getRecharges, getLastRecharge, getUserWalletBalanceFromBackend, getRechargesFromBackend } from "@/client-api/recharge";
 import { useSession } from "next-auth/react";
 
 const RechargeList = () => {
   const router = useRouter();
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [recharges, setRecharges] = useState([]);
   const [userWallet, setUserWallet] = useState(null);
 
@@ -31,10 +27,11 @@ const RechargeList = () => {
 
   const fetchData = async () => {
     // navTo("/profile");
-    await getRecharges(userId)
+    await getRechargesFromBackend(session.accessToken)
       .then((rsp) => {
         console.log(rsp);
-        setRecharges(rsp);
+        // Extract topups array from response
+        setRecharges(rsp.topups || []);
       })
       .catch((error) => {
         console.log(error.message);
@@ -43,7 +40,7 @@ const RechargeList = () => {
 
   const fetchWalletBalance = async () => {
     // navTo("/profile");
-    await getLastRecharge(userId)
+    await getUserWalletBalanceFromBackend(session.accessToken)
       .then((rsp) => {
         console.log(rsp);
         setUserWallet(rsp);
@@ -55,43 +52,37 @@ const RechargeList = () => {
 
   return (
     <>
-      <style jsx>
-        {`
-          .btn-recharge {
-            width: 60px;
-            height: 26px;
-
-            background: rgba(255, 255, 255, 0.3);
-            border: 0.934579px solid rgba(255, 255, 255, 0.5);
-            border-radius: 16px;
-          }
-        `}
-      </style>
-      <div className="p-[27px] w-full flex justify-center bg-[#F5F5F5]">
-        <div className="relative inline-block">
-          <ProfileBanner />
-          <div className="absolute top-[20px] left-[20px] text-white">
-            <div className="text-[12px]">目前點數</div>
-            <div className="text-[24px] font-medium">
-              {(userWallet && userWallet.balance) || 0}
-            </div>
-            <button
-              className="text-[12px] btn-recharge mt-3"
-              onClick={() => router.push("recharge")}
-            >
-              充值
-            </button>
+      <div className="p-[27px] w-full flex flex-col items-center text-center bg-[#F5F5F5]">
+        <div className="mb-[20px]">
+          <div className="text-[16px] mb-[10px]">目前點數:</div>
+          <div className="text-[48px] font-bold">
+            {(userWallet && userWallet.wallet.balance) || 0}
           </div>
         </div>
       </div>
       <div className="flex flex-col items-center h-full text-center">
-        {recharges.map((rechr) => (
-          <RechargeItem
-            key={rechr.id}
-            recharge={rechr}
-            // navClick={handleNavClick}
-          />
-        ))}
+        {recharges.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-[80px] text-[#BDBDBD]">
+            <div className="text-[48px] mb-4">💳</div>
+            <div className="text-[16px] mb-2">尚無充值紀錄</div>
+            <div className="text-[14px]">開始您的第一筆充值吧！</div>
+            <button
+              type="button"
+              className={`py-2 px-6 rounded-full mt-6 ${styles["btn-primary"]}`}
+              onClick={() => router.push("recharge")}
+            >
+              立即充值
+            </button>
+          </div>
+        ) : (
+          recharges.map((rechr) => (
+            <RechargeItem
+              key={rechr.id}
+              recharge={rechr}
+              // navClick={handleNavClick}
+            />
+          ))
+        )}
       </div>
     </>
   );

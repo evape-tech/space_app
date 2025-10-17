@@ -13,17 +13,14 @@ import { getUserStatus, updateUserStatus, setUserStatus } from '@/utils/storeToo
 import PowerIcon from "@/image/icons/Power.svg";
 import CpCharging from "@/image/icons/cp-charging.svg";
 import { useSession } from "next-auth/react";
-import { cpRoundStart, getCpByKey } from "@/client-api/cp";
+import { cpRoundStart, getCpByKey, cpCmdFromBackend, cpStartCmdFromBackend, cpStopCmdFromBackend, getCpidByKeyFromBackend } from "@/client-api/cp";
 
 const CpopCharging = () => {
   const router = useRouter();
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data, status } = useSession();
+  const userId = data?.user?.id;
+  const userUuid = data?.user?.uuid;
   const cpId = useRef(null);
-  const roundId = useRef(null);
   const cpStatus = useRef(null);
 
   let cpInterval = null;
@@ -46,7 +43,7 @@ const CpopCharging = () => {
 
   const getCpStatus = () => {
     return new Promise((resolve, reject) => {
-      cpCmd("get_cp_status", cpId.current)
+      cpCmdFromBackend("get_cp_status", cpId.current)
         .then((rsp) => {
           console.log(rsp);
           //參數有:Charging,Preparing,Available
@@ -58,24 +55,21 @@ const CpopCharging = () => {
 
   const getStationId = async () => {
     return new Promise((resolve, reject) => {
-      getCpByKey(cpId.current)
+      getCpidByKeyFromBackend(cpId.current)
         .then((rsp) => resolve(rsp.stationId))
         .catch((err) => reject(err));
     });
   };
 
-  const roundStart = async (rid) => {
+  const roundStart = async () => {
     const stationId = await getStationId(cpId.current);
     const body = {
       stationId,
       cpIdKey: cpId.current,
       userId: userId,
-      roundId: rid,
     };
     cpRoundStart(body) // log start.
       .then((rsp) => {
-        roundId.current = rid;
-        updateUserStatus({ rid })
         console.log(rsp);
       })
       .catch((err) => {
@@ -103,56 +97,29 @@ const CpopCharging = () => {
       currentkWh: +cpState.data1,
       eA: +cpState.data2,
       eV: +cpState.data3,
-      roundId: cpState.data6,
     }
     setChargingData(state);
 
-    if (state.roundId === roundId.current) {
-      cpStatus.current = state.current_status;
-      if (cpStatus.current !== CpStatusEnum.Charging) {
-        if (
-          cpStatus.current === CpStatusEnum.Available ||
-          cpStatus.current === CpStatusEnum.Finishing
-        ) {
-          clearInterval(cpInterval); // leave page.
-          updateUserStatus({ appPath: "/cpop/station-map" })
-          router.push("cpop-endup");
-        }
-        // if (cpStatus.current === CpStatusEnum.Preparing) {
-        //   clearInterval(cpInterval); // leave page.
-        //   updateUserStatus({
-        //     rid: null,
-        //     appPath: "/cpop/station-map"
-        //   })
-        //   router.push("cpop-conn");
-        // }
+    cpStatus.current = state.current_status;
+    if (cpStatus.current !== CpStatusEnum.Charging) {
+      if (
+        cpStatus.current === CpStatusEnum.Available ||
+        cpStatus.current === CpStatusEnum.Finishing
+      ) {
+        clearInterval(cpInterval); // leave page.
+        updateUserStatus({ appPath: "/cpop/station-map" })
+        router.push("cpop-endup");
       }
     }
-    else { // clean reset
-      clearInterval(cpInterval); // leave page.
-      setUserStatus({
-        userId,
-        cpid: null,
-        rid: null,
-        appPath: "/cpop/station-map"
-      })
-      router.push("station-map");
-    }
-  };
-
-  const uniqueId = () => {
-    const dateString = Date.now().toString(36);
-    const randomness = Math.random().toString(36).substr(2);
-    return dateString + randomness;
   };
 
   const cpStart = async () => {
-    const rid = uniqueId();
-    cpStartCmd("cmd_start_charging", cpId.current, rid)
+    console.log("CpopCharging cpStart =>", JSON.stringify(data, null, 2));
+    cpStartCmdFromBackend(userUuid, cpId.current)
       .then(async (rsp) => {
         console.log(rsp);
         try {
-          await roundStart(rid);
+          await roundStart();
           polling();
         } catch (error) {
           console.log(error.message);
@@ -163,12 +130,28 @@ const CpopCharging = () => {
       .catch((err) => console.log(err.message));
   };
 
-  const cpStop = () => {
-    cpCmd("cmd_stop_charging", cpId.current)
-      .then((rsp) => {
-        console.log(rsp);
-      })
-      .catch((err) => console.log(err.message));
+  const cpStop = async () => {
+    // stop polling immediately
+    try {
+      if (cpInterval) clearInterval(cpInterval);
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const rsp = await cpStopCmdFromBackend(userUuid, cpId.current);
+      console.log("cpStop response:", JSON.stringify(rsp, null, 2));
+
+      // update user status and navigate to end page
+      updateUserStatus({ appPath: "/cpop/station-map" });
+      setUserStatus({ userId, cpid: null, appPath: "/cpop/station-map" });
+      router.push("cpop-endup");
+    } catch (err) {
+      console.log(err?.message || err);
+      // ensure we still navigate/cleanup on error
+      setUserStatus({ userId, cpid: null, appPath: "/cpop/station-map" });
+      router.push("cpop-endup");
+    }
   };
 
   // Available
@@ -179,16 +162,12 @@ const CpopCharging = () => {
   useEffect(() => {
     // map, charging only charging keep the path.
     updateUserStatus({ appPath: "/cpop/cpop-charging" })
-    // check if roundId else start
-    const { cpid, rid } = getUserStatus()
+    const { cpid } = getUserStatus()
+    console.log("CpopCharging cpid:", cpid);
     if (cpid) cpId.current = cpid;
-    if (rid) {
-      roundId.current = rid
-      polling();
-      setLoading(false);
-    } else {
-      cpStart(); // gen roundId
-    }
+    
+    console.log("CpopCharging start charging");
+    cpStart();
 
     return () => {
       clearInterval(cpInterval);

@@ -1,16 +1,14 @@
-import { useState, useRef } from "react";
-import { useRecoilState } from "recoil";
+import { useState } from "react";
 import styles from "@/styles/verify-code.module.scss";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 
-import DirectionIcon from "@/image/icons/direction.svg";
-import ListCpIcon from "@/image/icons/list-cp.svg";
+
+import ArrowIcon from "@/image/icons/chevron-down.svg";
 import ParkingIcon from "@/image/icons/parking.svg";
 
 // import { useRouter } from "next/router";
 
-import { userPosState, currStationInfoState } from "@/atom/atomState";
 
 // {
 //   id: 2,
@@ -25,45 +23,78 @@ const StationItem = ({ station }) => {
     router.push(path);
   };
 
-  const [pointA] = useRecoilState(userPosState);
-  const pointB = useRef(null)
-  
-  // const [pointB] = useRecoilState(currStationInfoState);
 
-  const newTabStartNav = () => {
-    const url = `https://www.google.com/maps/dir/${pointA.lat},${pointA.lng}/${pointB.current.lat},${pointB.current.lng}`;
-    window.open(url, "_blank").focus();
-  };
+  const { name, floor, spaceCount, meters } = station;
 
+  // compute gun counts from meters -> guns
+  let totalGuns = 0;
+  let acGuns = 0;
+  let dcGuns = 0;
+  const gunsList = [];
+  if (Array.isArray(meters)) {
+    meters.forEach((m) => {
+      if (Array.isArray(m.guns)) {
+        m.guns.forEach((g) => {
+          totalGuns += 1;
+          const acdc = (g.acdc || "").toString().toUpperCase();
+          if (acdc === "AC") acGuns += 1;
+          else if (acdc === "DC") dcGuns += 1;
+          gunsList.push({ ...g, meter_no: m.meter_no });
+        });
+      }
+    });
+  }
 
-  const { name, km, spaceCount } = station;
+  const [expanded, setExpanded] = useState(false);
   return (
-    <div
-      className="text-[15px] flex p-[15px] 
-      border-b-2 justify-between items-center w-full bg-white"
-    >
-      <div className="text-left">
-        <div>{name || '未命名'}</div>
-        <div className="flex gap-[15px]">
-          <div className="flex items-center text-[13px] ">
-            <ListCpIcon /> 
-            <span className="text-[15px] font-medium text-[#4F4F4F]"> &nbsp;{km || '距離未知'} </span> &nbsp;
-          </div>
-          <div className="flex  items-center text-[13px]">
-            <ParkingIcon />
-            <span className="text-[18px] font-medium text-[#4F4F4F]"> &nbsp; {spaceCount}</span> &nbsp;空位
+    <div className="w-full bg-white border-b-2">
+      <div
+        className="text-[15px] flex p-[15px] 
+      justify-between items-center w-full"
+      >
+        <div className="text-left">
+          <div>{name || '未命名'}-{floor || '未知樓層'}</div>
+          {/* gun counts summary */}
+          <div className="text-[12px] text-[#828282] mt-1">
+            槍數: {totalGuns} {totalGuns > 0 && ` (AC ${acGuns} / DC ${dcGuns})`}
           </div>
         </div>
+        <button
+          onClick={() => setExpanded((s) => !s)}
+          aria-expanded={expanded}
+          className="p-2 rounded-full"
+          style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 150ms ease' }}
+        >
+          <ArrowIcon />
+        </button>
       </div>
-      <button onClick={() => {
-        pointB.current = {
-          lat: station.latLng.lat,
-          lng: station.latLng.lng,
-        }
-        newTabStartNav()
-      }}>
-        <DirectionIcon />
-      </button>
+
+      {/* Expanded gun list */}
+      {expanded && (
+        <div className="px-4 pb-4">
+          {gunsList.length === 0 ? (
+            <div className="text-[13px] text-[#828282]">尚無電槍資料</div>
+          ) : (
+            <div className="flex flex-col gap-2 mt-2">
+                {gunsList.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between text-[13px] p-3 bg-white rounded-lg shadow-sm">
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-[14px]">{g.cpsn || g.cpid || `槍 ${g.id}`}</div>
+                      <div className="text-[#828282] text-[12px] mt-2">
+                        {g.connector ? `Connector: ${g.connector}` : null}
+                        {g.max_kw ? ` • ${g.max_kw}kW` : null}
+                        {g.guns_status ? ` • ${g.guns_status}` : null}
+                      </div>
+                    </div>
+                    <div className="ml-4 flex-shrink-0">
+                      <div className="px-3 py-1 bg-gray-100 rounded-full text-[12px] text-[#616161]">{((g.acdc || '')).toString().toUpperCase()}</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

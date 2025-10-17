@@ -5,7 +5,7 @@ import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
 import { CpStatusEnum } from "@/types/index";
-import { cpCmd } from "@/client-api/cp";
+import { cpCmd, cpCmdFromBackend } from "@/client-api/cp";
 import { getUserStatus } from '@/utils/storeTool'
 
 const CpopStart = () => {
@@ -16,11 +16,11 @@ const CpopStart = () => {
 
   const getCpStatus = () => {
     return new Promise((resolve, reject) => {
-      cpCmd("get_cp_status", cpid)
+      cpCmdFromBackend("get_cp_status", cpid)
         .then((rsp) => {
-          console.log(rsp);
+          console.log("getCpStatus rsp:", rsp);
           //參數有:Charging,Preparing,Available
-          resolve(rsp.current_status);
+          resolve(rsp.data.guns_status);
         })
         .catch((err) => reject(err));
     });
@@ -36,9 +36,17 @@ const CpopStart = () => {
       clearInterval(cpInterval);
       router.push("cpop-cancel");
     }
-    if (state === CpStatusEnum.Preparing) {
-      clearInterval(cpInterval);
-      router.push("cpop-charging");
+    switch (state) {
+      case CpStatusEnum.Available:
+        break;
+      case CpStatusEnum.Preparing:
+        clearInterval(cpInterval);
+        router.push("cpop-charging");
+        break;
+      case CpStatusEnum.Charging:
+        break;
+      default:
+        break;
     }
   };
 

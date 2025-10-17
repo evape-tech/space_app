@@ -9,15 +9,12 @@ import React, { useState } from "react";
 import SwipeToDelete from "react-swipe-to-delete-ios";
 import AddIcon from "@/image/icons/plus.svg";
 import { useSession } from "next-auth/react";
-import { getUserCars, deleteCar } from "@/client-api/car";
+import { getUserCars, deleteCar, getUserCarsFromBackend, createCarForBackend, deleteCarForBackend } from "@/client-api/car";
 import DeleteIcon from "@/image/icons/Trash.svg";
 
 const CarList = () => {
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
   const [cars, setCars] = useState([]);
 
@@ -32,10 +29,11 @@ const CarList = () => {
 
   const fetchData = async () => {
     // navTo("/profile");
-    await getUserCars(userId)
+    await getUserCarsFromBackend(session.accessToken)
       .then((rsp) => {
         console.log(rsp);
-        setCars(rsp);
+        // backend returns { success:true, vehicles: [...], total }
+        setCars(rsp.vehicles || []);
       })
       .catch((error) => {
         console.log(error.message);
@@ -43,7 +41,7 @@ const CarList = () => {
   };
 
   const handleDelete = async (id) => {
-    await deleteCar(id)
+    await deleteCarForBackend(id, session.accessToken)
       .then(async (rsp) => {
         // console.log(rsp);
         await fetchData();
@@ -58,8 +56,8 @@ const CarList = () => {
       <div className="flex flex-col h-full text-center mt-2 text-[#333333]">
         {cars.map((car) => (
           <SwipeToDelete
-            key={car.id}
-            onDelete={() => handleDelete(car.id)}
+            key={car.id || car.carNo}
+            onDelete={() => handleDelete(car.id || car.carNo)}
             height={65} // required
             // optional
             deleteComponent={
@@ -82,7 +80,7 @@ const CarList = () => {
             deleteColor="rgba(252, 58, 48, 1.00)" // default
             rtl={false} // default
           >
-            <CarItem key={car.carNo} car={car} />
+            <CarItem key={car.id || car.carNo} car={car} />
           </SwipeToDelete>
         ))}
       </div>

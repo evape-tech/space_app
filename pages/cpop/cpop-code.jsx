@@ -7,7 +7,7 @@ import AuthCode from "react-auth-code-input";
 import { useState } from "react";
 import InputCode from "@/components/InputCode";
 import { Badge } from "@mantine/core";
-import { getCpByKey } from "@/client-api/cp";
+import { getCpByKey, getCpidByKeyFromBackend } from "@/client-api/cp";
 import { updateUserStatus } from "@/utils/storeTool";
 
 const CpopCode = () => {
@@ -33,7 +33,7 @@ const CpopCode = () => {
 
   const checkCpExist = () => {
     return new Promise((resolve, reject) => {
-      getCpByKey(inputCode)
+      getCpidByKeyFromBackend(inputCode)
         .then((rsp) => resolve(true))
         .catch((err) => reject(false));
     });

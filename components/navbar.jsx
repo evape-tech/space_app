@@ -30,8 +30,8 @@ const NavBar = ({ title, onBackClick, backUrl, hideBack = false }) => {
           <NavBackIcon />
         </button>
       )}
-
-      {title || <BrandTitle />}
+      {'StarPlus'}
+      {/* {title || <BrandTitle />} */}
     </div>
   );
 };

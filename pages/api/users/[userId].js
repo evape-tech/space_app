@@ -47,11 +47,19 @@ handler.put(async (req, res, next) => {
     // }
 
     try {
-        const profile = await prisma.profile.update({
-            where: {
-                userId: +userId,
-            },
-            data: body
+        const uid = +userId
+
+        // ensure user exists
+        const user = await prisma.user.findUnique({ where: { id: uid } })
+        if (!user) {
+            return res.status(404).json({ code: 404, message: 'User not found.' })
+        }
+
+        // create profile if missing, otherwise update
+        const profile = await prisma.profile.upsert({
+            where: { userId: uid },
+            create: Object.assign({ userId: uid }, body),
+            update: body,
         })
 
         // const users = await prisma.user.findMany()

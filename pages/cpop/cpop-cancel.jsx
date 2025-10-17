@@ -11,10 +11,9 @@ const CpopCancel = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // reset cpid / rid
+    // reset cpid
     updateUserStatus({
       cpid: null,
-      rid: null,
     })
   }, []);
 

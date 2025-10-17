@@ -4,15 +4,12 @@ import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
 import ChargeItem from "@/components/charge-item";
-import { getChargeTx } from "@/client-api/user";
+import { getChargeTx, getChargeTxFromBackend } from "@/client-api/user";
 import { useSession } from "next-auth/react";
 
 const ChargeList = () => {
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const router = useRouter();
   const navTo = (path) => {
     router.push(path);
@@ -22,10 +19,14 @@ const ChargeList = () => {
 
   const fetchData = () => {
     // navTo("/profile");
-    getChargeTx(userId)
+    getChargeTxFromBackend(session.accessToken)
       .then((rsp) => {
         console.log(rsp);
-        setCharges(rsp);
+        // Filter only charging transactions
+        const chargingTransactions = rsp.transactions?.filter(
+          (tx) => tx.source === "charging" && tx.type === "charging"
+        ) || [];
+        setCharges(chargingTransactions);
       })
       .catch((error) => {
         console.log(error.message);
@@ -40,9 +41,24 @@ const ChargeList = () => {
 
   return (
     <div className="flex flex-col items-center h-full text-center">
-      {charges.map((chr) => (
-        <ChargeItem key={chr.id} charge={chr} navClick={handleNavClick} />
-      ))}
+      {charges.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-[80px] text-[#BDBDBD]">
+          <div className="text-[48px] mb-4">⚡</div>
+          <div className="text-[16px] mb-2">尚無充電紀錄</div>
+          <div className="text-[14px]">開始您的第一次充電吧！</div>
+          <button
+            type="button"
+            className={`py-2 px-6 rounded-full mt-6 ${styles["btn-primary"]}`}
+            onClick={() => router.push("/cpop/station-map")}
+          >
+            前往充電
+          </button>
+        </div>
+      ) : (
+        charges.map((chr) => (
+          <ChargeItem key={chr.id} charge={chr} navClick={handleNavClick} />
+        ))
+      )}
     </div>
   );
 };

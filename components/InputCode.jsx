@@ -7,10 +7,14 @@ const InputCode = ({ length, label, loading, onComplete, onKeyPress }) => {
   // useRef<(HTMLInputElement | null)[]>([])
 
   const processInput = (e, slot) => {
-    const num = e.target.value;
-    if (/[^0-9]/.test(num)) return;
+    let ch = e.target.value;
+    if (!ch) return;
+    // 允許英文字母與數字，並將字母轉為大寫
+    ch = ch.toString().slice(-1);
+    if (!/^[a-zA-Z0-9]$/.test(ch)) return;
+    ch = /^[a-zA-Z]$/.test(ch) ? ch.toUpperCase() : ch;
     const newCode = [...code];
-    newCode[slot] = num;
+    newCode[slot] = ch;
     setCode(newCode);
     if (slot !== length - 1) {
       inputs.current[slot + 1].focus();
@@ -80,14 +84,15 @@ const InputCode = ({ length, label, loading, onComplete, onKeyPress }) => {
             <input
               key={idx}
               type="text"
-              inputMode="numeric"
+              inputMode="text"
+              pattern="[A-Za-z0-9]"
               maxLength={1}
               value={num}
               autoFocus={!code[0].length && idx === 0}
               readOnly={loading}
               onChange={(e) => processInput(e, idx)}
               onKeyUp={(e) => onKeyUp(e, idx)}
-              ref={(ref) => inputs.current.push(ref)}
+              ref={(ref) => (inputs.current[idx] = ref)}
             />
           );
         })}

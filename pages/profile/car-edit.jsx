@@ -5,19 +5,18 @@ import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
 import { Input, Select, TextInput } from "@mantine/core";
 import { useForm, isNotEmpty } from "@mantine/form";
-import { createCar } from "@/client-api/car";
+import { createCar, createCarForBackend, getCarsBrandsListFromBackend } from "@/client-api/car";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 
 const CarEdit = () => {
   const router = useRouter();
 
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
   // const [formValues, setFormValues] = useState({});
+  const [brands, setBrands] = useState([]);
   const form = useForm({
     initialValues: {
       brand: "",
@@ -34,16 +33,30 @@ const CarEdit = () => {
     },
   });
 
+  useEffect(() => {
+    // load brands list for the Select
+    getCarsBrandsListFromBackend()
+      .then((rsp) => {
+        // API returns { success: true, brands: [...] }
+        setBrands((rsp && rsp.brands) || []);
+      })
+      .catch((err) => console.log(err.message));
+  }, []);
+
   const handleSubmit = form.onSubmit(
     (values, _event) => {
-      const body = { ...values };
-      body.carNo = `${body.carNo1}-${body.carNo2}`;
-      body.userId = userId;
-      delete body.carNo1;
-      delete body.carNo2;
-      // setFormValues(body);
-      // console.log(body);
-      createCar(body, userId)
+      // ensure brandId is the selected id (number)
+      const parsedBrandId = parseInt(values.brand, 10);
+      const brandIdToSend = Number.isInteger(parsedBrandId) ? parsedBrandId : values.brand;
+
+      // Build payload to match backend curl: { brandId, modelName, licensePlate }
+      const payload = {
+        brandId: brandIdToSend,
+        modelName: values.model,
+        licensePlate: `${values.carNo1}-${values.carNo2}`,
+      };
+
+      createCarForBackend(payload, session.accessToken)
         .then((rsp) => {
           navTo("car-list");
         })
@@ -67,8 +80,10 @@ const CarEdit = () => {
       onSubmit={handleSubmit}
       className="flex flex-col h-full gap-[30px] items-center"
     >
-      <TextInput
+      <Select
         label="廠牌"
+        data={brands.map((b) => ({ value: String(b.id), label: b.name }))}
+        placeholder="請選擇廠牌"
         className="w-full"
         withAsterisk
         {...form.getInputProps("brand")}

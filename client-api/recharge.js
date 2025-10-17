@@ -1,5 +1,8 @@
 import request from '@/utils/request'
 
+/**
+ * @deprecated
+ */
 export function getRecharges(userId) {
     return request({
         url: `/users/${userId}/recharges`,
@@ -7,6 +10,9 @@ export function getRecharges(userId) {
     })
 }
 
+/**
+ * @deprecated
+ */
 export function getLastRecharge(userId) {
     return request({
         url: `/users/${userId}/rechargeBalance`,
@@ -19,5 +25,29 @@ export function checkOutPage(data) {
         url: `/ecpay/checkout`,
         method: 'post',
         data
+    })
+}
+
+export function getRechargesFromBackend(token) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+    
+    return request({
+        url: `${baseUrl}/users/me/topups`,
+        method: 'get',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+}
+
+export function getUserWalletBalanceFromBackend(token) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+    
+    return request({
+        url: `${baseUrl}/users/me/wallet`,
+        method: 'get',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
     })
 }

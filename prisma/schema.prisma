@@ -48,6 +48,8 @@ enum CpOnlineType {
 
 model User {
   id         Int          @id @default(autoincrement())
+  // external uuid from auth provider / backend
+  uuid       String?      @unique
   acc        String       @unique
   provider   Provider
   profile    Profile?

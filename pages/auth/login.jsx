@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import clsx from "clsx";
-import Logo from "@/image/icons/logo.svg";
 import Google from "@/image/icons/google.svg";
 import Line from "@/image/icons/line.svg";
 import LayoutWoAth from "@/components/layout-woAuth";
@@ -108,8 +107,8 @@ const Login = ({ providers }) => {
       <Modal opened={opened} onClose={() => setOpened(false)} title="提示">
         {modalText}
       </Modal>
-      <div className="logo w-[65%] mx-auto">
-        <Logo />
+      <div className="logo w-[65%] mx-auto flex justify-center items-center">
+        <img src="/images/brand_icon.webp" alt="brand icon" className="w-full h-auto object-contain rounded-lg" />
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-[30px]">
         <TextInput

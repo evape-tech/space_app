@@ -20,6 +20,7 @@ const VerifyCode = () => {
   // const [isDisabled, setIsDisabled] = useState(true);
   const [currentLen, setCurrentLen] = useState(0);
   const [invalid, setInvalid] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const {
     query: { callbackUrl },
   } = router;
@@ -44,14 +45,28 @@ const VerifyCode = () => {
 
   const verifyCode = async () => {
     if (inputCode === vcode) {
-      // check phone no. if exist skip, if none , create.
-      // create a user by phoneNo.
-      const res = await signIn("credentials", {
-        phoneNo,
-        redirect: false,
-      });
-      if (res?.ok) {
-        router.push("/cpop/station-map");
+      setLoginError('');
+      try {
+        // 使用 NextAuth signIn，會呼叫 CredentialsProvider 的 authorize
+        const result = await signIn('credentials', {
+          phoneNo: phoneNo,
+          redirect: false, // 不自動導向，我們自己處理
+        });
+
+        if (result?.error) {
+          console.error('NextAuth signIn failed:', result.error);
+          setLoginError('登入失敗，請稍後再試');
+          return;
+        }
+
+        if (result?.ok) {
+          // 登入成功，導向 station-map
+          router.push('/cpop/station-map');
+        }
+      } catch (err) {
+        console.error('signIn error:', err);
+        setLoginError(err.message || '無法連線，請稍後再試');
+        return;
       }
     } else setInvalid(true);
   };
@@ -72,6 +87,13 @@ const VerifyCode = () => {
           </Badge>
         </div>
       }
+      {loginError && (
+        <div>
+          <Badge color="red" size="xl" radius="md" variant="filled">
+            {loginError}
+          </Badge>
+        </div>
+      )}
       <div>
         <InputCode length={6} onComplete={onComplete} onKeyPress={onKeyPress} />
       </div>

@@ -44,3 +44,28 @@ export function getChargeTx(userId) {
         method: 'get'
     })
 }
+
+export function getChargeTxFromBackend(token) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+    
+    return request({
+        url: `${baseUrl}/users/me/transactions`,
+        method: 'get',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+}
+
+
+export function getUserProfileFromBackend(token) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+    
+    return request({
+        url: `${baseUrl}/users/me`,
+        method: 'get',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+}
