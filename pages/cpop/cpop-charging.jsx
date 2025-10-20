@@ -89,18 +89,25 @@ const CpopCharging = () => {
   };
 
   const checkCpStatus = async () => {
-    const cpState = await getCpStatus();
+    const response = await getCpStatus();
+    
+    // Parse new backend JSON format
+    const cpData = response?.data;
+    const transaction = cpData?.transaction;
+    
     const state = {
-      cpIdKey: cpState.cpid,
-      cp_online: cpState.cp_online,
-      current_status: cpState.current_status,
-      currentkWh: +cpState.data1,
-      eA: +cpState.data2,
-      eV: +cpState.data3,
+      cpIdKey: cpData?.cpid,
+      guns_status: cpData?.guns_status, // Charging, Available, Preparing, Finishing
+      currentkWh: transaction?.energy_consumed || 0, // 已充電量（度數）
+      chargingDuration: transaction?.charging_duration || 0, // 充電持續秒數
+      maxKw: cpData?.max_kw || 0, // 充電樁最大 KW 數
+      currentPower: transaction?.current_power || 0, // 當前功率
+      currentVoltage: transaction?.current_voltage || 0, // 當前電壓
+      currentCurrent: transaction?.current_current || 0, // 當前電流
     }
     setChargingData(state);
 
-    cpStatus.current = state.current_status;
+    cpStatus.current = state.guns_status;
     if (cpStatus.current !== CpStatusEnum.Charging) {
       if (
         cpStatus.current === CpStatusEnum.Available ||
@@ -154,6 +161,23 @@ const CpopCharging = () => {
     }
   };
 
+  // Format charging duration to HH:MM:SS or H小時M分S秒
+  const formatDuration = (seconds) => {
+    if (!seconds) return "0分0秒";
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}小時${minutes}分${secs}秒`;
+    } else if (minutes > 0) {
+      return `${minutes}分${secs}秒`;
+    } else {
+      return `${secs}秒`;
+    }
+  };
+
   // Available
   // Preparing
   // Charging
@@ -204,9 +228,14 @@ const CpopCharging = () => {
       </style>
       <div className="mt-[20%] mb-[30px]">
         <div className="flex justify-between mb-[10px]">
-          <div className="flex">
-            <CpCharging />
-            &nbsp;&nbsp;充電中
+          <div className="flex flex-col items-start">
+            <div className="flex items-center">
+              <CpCharging />
+              &nbsp;&nbsp;充電中
+            </div>
+            <div className="text-[14px] text-[#01F2CF] mt-1">
+              充電時長: {formatDuration(chargingData?.chargingDuration || 0)}
+            </div>
           </div>
           <div>資料回傳可能延遲</div>
         </div>
@@ -217,25 +246,19 @@ const CpopCharging = () => {
         >
           <div className="border-r-2 border-[#4F4F4F] flex-1">
             <div className="text-[22px]">
-              {chargingData
-                ? Number.parseFloat(
-                  (chargingData.eA * chargingData.eV) / 1000
-                ).toFixed(1)
-                : "0.0"}{" "}
-              KW
+              {chargingData?.maxKw || "0.0"} KW
             </div>
-            {/* 設備功率是data2 x data3 / 1000 , 如7.87 x 228.0 / 1000 = 1.79 KW */}
-            <span className="text-[#01F2CF] text-[13px]">設備功率</span>
+            <span className="text-[#01F2CF] text-[13px]">充電樁功率</span>
           </div>
           <div className="border-r-2 border-[#4F4F4F] flex-1">
             <div className="text-[22px]">
-              {chargingData?.currentkWh || 0} 度
+              {chargingData?.currentkWh?.toFixed(2) || "0.00"} 度
             </div>
             <span className="text-[#01F2CF] text-[13px]">已充電量</span>
           </div>
           <div className="border-r-2 border-[#4F4F4F] flex-1">
             <div className="text-[22px]">
-              {Math.trunc(chargingData?.currentkWh * 10) || 0} 元
+              {Math.round((chargingData?.currentkWh || 0) * 10)} 元
             </div>
             <span className="text-[#01F2CF] text-[13px]">預估金額</span>
           </div>
@@ -249,14 +272,14 @@ const CpopCharging = () => {
             width={500}
             height={500}
           />
-          <Image
+          {/* <Image
             src="/images/lightning.png"
             alt="Picture of the author"
             width={30}
             height={30}
             className={clsx(chargingStyles.breathing,
               "absolute bottom-[30%] right-[12%]")}
-          />
+          /> */}
         </div>
       </div>
 

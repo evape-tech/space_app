@@ -5,6 +5,7 @@ import { Modal } from '@mantine/core';
 
 import BottomBarCp from "@/image/icons/bottom_bar_cp.svg";
 import ProfileIcon from "@/image/icons/profile.svg";
+import EVSEIcon from "@/image/icons/evse.svg";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
@@ -122,19 +123,40 @@ const StationMap = () => {
     <>
       <div className="h-full">
         <style jsx>{`
-          .bottom-bar {
-            background: transparent url("/images/bottom_bar.png") no-repeat
-              center;
-             {
-              /* background-position: bottom -20px left -27px; */
-            }
-             {
-              /* border: 1px solid #4d4d4d; */
-            }
+          .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
           }
-          .infoModal-box {
-            box-shadow: 0px -4px 20px rgba(0, 0, 0, 0.1);
-            border-radius: 16px 16px 0px 0px;
+          .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 0;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+          }
+          .nav-item:active {
+            transform: scale(0.95);
+          }
+          .nav-item .icon {
+            margin-bottom: 4px;
+          }
+          .nav-item .label {
+            font-size: 12px;
+            color: #757575;
+            margin-top: 4px;
+          }
+          .nav-item.active .label {
+            color: #1976d2;
           }
         `}</style>
 
@@ -229,41 +251,41 @@ const StationMap = () => {
         </div>
 
         <div
-          className="absolute overflow-hidden left-0 right-0 ml-auto mr-auto
-              w-[334px] h-[122px] 
-              flex flex-col gap-[30px] 
-              text-center
-              bottom-[5%]"
+          className="bottom-nav"
         >
-          <div
-            className="bottom-bar flex 
-              w-[334px] h-[122px] 
-              text-[#BDBDBD] text-[12px]"
-          >
-            <div className="flex items-center justify-center flex-1 h-full">
-              <button
-                className="flex flex-col items-center mt-[20px] ml-[15px]"
-                onClick={() => checkProfileAndNavigate("station-list")}
-              >
+          <div className="flex items-center h-[70px]">
+            {/* 充電站 */}
+            <button
+              className="nav-item"
+              onClick={() => checkProfileAndNavigate("station-list")}
+            >
+              <div className="icon">
                 <BottomBarCp />
-                <p className="mt-2">充電站</p>
-              </button>
-            </div>
-            <div className="flex-1">
-              <button className="-mt-[4px]" onClick={checkWallet}>
-                <StartChargeIcon />
-                <p className="-mt-[22px]">啟動充電</p>
-              </button>
-            </div>
-            <div className="flex items-center justify-center flex-1">
-              <button
-                className="flex flex-col items-center mt-[20px] mr-[15px]"
-                onClick={() => navTo("/profile")}
-              >
+              </div>
+              <span className="label">充電站</span>
+            </button>
+
+            {/* 啟動充電 */}
+            <button
+              className="nav-item"
+              onClick={checkWallet}
+            >
+              <div className="icon">
+                <EVSEIcon />
+              </div>
+              <span className="label">啟動充電</span>
+            </button>
+
+            {/* 個人中心 */}
+            <button
+              className="nav-item"
+              onClick={() => navTo("/profile")}
+            >
+              <div className="icon">
                 <ProfileIcon />
-                <p className="mt-2">個人中心</p>
-              </button>
-            </div>
+              </div>
+              <span className="label">個人中心</span>
+            </button>
           </div>
         </div>
 
