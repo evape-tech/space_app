@@ -4,6 +4,29 @@ import axios from 'axios'
 // import { getToken } from '@/utils/auth'
 const baseUrl = process.env.NEXT_PUBLIC_BASE_API
 
+// Global flag to prevent multiple 401 redirects
+let isRedirectingTo401 = false
+
+// Helper function to sign out and redirect to login
+const handleUnauthorized = async () => {
+    if (isRedirectingTo401) return
+    isRedirectingTo401 = true
+    
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+        try {
+            // Dynamically import signOut to avoid SSR issues
+            const { signOut } = await import('next-auth/react')
+            // Sign out without redirecting (we'll do it manually)
+            await signOut({ redirect: false })
+        } catch (error) {
+            console.error('Error signing out:', error)
+        } finally {
+            // Redirect to login page
+            window.location.href = '/auth/login'
+        }
+    }
+}
+
 // create an axios instance
 const service = axios.create({
     baseURL: baseUrl, // url = base url + request url
@@ -67,6 +90,11 @@ service.interceptors.response.use(
             //         })
             //     })
             // }
+            // if backend indicates unauthorized, redirect to login
+            if (res.code === 401 || res.code === 403) {
+                handleUnauthorized()
+            }
+
             return Promise.reject(new Error(res.message || 'Error'))
         } else {
             return res
@@ -74,6 +102,10 @@ service.interceptors.response.use(
     },
     error => {
         console.log('err' + error) // for debug
+        // If the HTTP status is 401, redirect to login page
+        if (error && error.response && error.response.status === 401) {
+            handleUnauthorized()
+        }
         // Message({
         //     message: error.message,
         //     type: 'error',
