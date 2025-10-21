@@ -25,7 +25,7 @@ const ChargeItem = ({ charge }) => {
   // Adapt to new API format
   const startTime = charge.start_time;
   const endTime = charge.end_time;
-  const amount = charge.amount || 0;
+  const energy_consumed = charge.energy_consumed || 0;
   const cpid = charge.cpid;
   const transactionId = charge.transaction_id;
 
@@ -40,7 +40,7 @@ const ChargeItem = ({ charge }) => {
       </div>
       <div className="text-right">
         <div className="text-[17px] font-medium">充電 {mins}分鐘</div>
-        <p className="text-[15px] text-[#BDBDBD]">花費點數 {amount.toFixed(2)}</p>
+        <p className="text-[15px] text-[#BDBDBD]">充電度數 {energy_consumed.toFixed(2)}</p>
         {transactionId && (
           <p className="text-[11px] text-[#E0E0E0] mt-1">
             {transactionId}

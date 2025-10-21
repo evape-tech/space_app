@@ -5,12 +5,13 @@ import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
 import { getUserStatus } from '@/utils/storeTool'
-import { payPointFee } from "@/client-api/user";
+import { payPointFee, getChargeTxLastestFromBackend, getChargeTariffsFromBackend } from "@/client-api/user";
 import { useSession } from "next-auth/react";
 import { getLastRecharge } from "@/client-api/recharge";
 import dayjs from "dayjs";
 import { updateUserStatus } from "@/utils/storeTool";
 import request from "@/utils/request";
+
 
 const CpopEndup = () => {
   const router = useRouter();
@@ -30,33 +31,62 @@ const CpopEndup = () => {
   //     }
   // }
 
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
-  const checkoutSummery = () => {
-    return new Promise((resolve, reject) => {
-      // Get the latest completed charging transaction for this cp and user
-      request({
-        url: `/cp/checkout-by-cp/${cpId.current}?userId=${userId}`,
-        method: "get",
-      })
-        .then(async (rsp) => {
-          resolve(rsp);
-        })
-        .catch((err) => {
-          console.log(err.message);
-          reject(err);
-        });
-    });
+  const checkoutSummery = async () => {
+    try {
+      // Get the latest completed charging transaction using session token
+      const rsp = await getChargeTxLastestFromBackend(session?.accessToken);
+
+      // Return both responses as a pair (similar to Kotlin Pair)
+      return { transaction: rsp};
+    } catch (err) {
+      console.log("checkoutSummery error:", err.message);
+      throw err;
+    }
   };
 
   const fetchEndupData = () => {
     setTimeout(async () => {
-      let state = await checkoutSummery();
-      setEndupData(state);
+      try {
+        const { transaction: response} = await checkoutSummery();
+        // Parse the new JSON format - transaction is at top level now
+        const transaction = response?.transaction;
+        const realtimeCost = transaction?.realtime_cost;
+        
+        if (transaction) {
+          // 從 realtime_cost 獲取真實費用
+          const feeAmount = realtimeCost?.estimated_total || 0;
+          
+          // Map to the format expected by UI
+          const state = {
+            kWh: transaction.energy_consumed || 0, // 充电度数
+            fee: feeAmount, // 從 realtime_cost.estimated_total 獲取
+            startTime: transaction.start_time,
+            endTime: transaction.end_time,
+            transactionId: transaction.transaction_id,
+            cpid: transaction.cpid,
+            cpsn: transaction.cpsn,
+            chargingDuration: transaction.charging_duration || 0, // 充电时长（秒）
+            meterStart: transaction.meter_start || 0,
+            meterStop: transaction.meter_stop || 0,
+            tariffName: realtimeCost?.tariff_name || '', // 電價名稱
+            tariffType: realtimeCost?.tariff_type || '', // 電價類型
+            energyFee: realtimeCost?.energy_fee || 0, // 能源費用
+            discountAmount: realtimeCost?.discount_amount || 0, // 折扣金額
+            station: {
+              name: `充电站 ${transaction.cpid}` // 可以根据需要调整
+            },
+            cpile: {
+              name: `充电桩 ${transaction.cpsn}`
+            }
+          };
+          setEndupData(state);
+        }
+      } catch (error) {
+        console.log("fetchEndupData error:", error);
+      }
     }, 500);
   };
 
@@ -106,50 +136,50 @@ const CpopEndup = () => {
           >
             <div className="border-r-2 border-[#4F4F4F] flex-1">
               <div className="text-[22px]">
-                {endupData && endupData?.kWh
-                  ? Number.parseFloat(endupData?.kWh).toFixed(1)
-                  : "0.0"}{" "}
-                KW
+                {endupData?.kWh?.toFixed(2) || "0.00"} 度
               </div>
-              {/* 設備功率是data2 x data3 / 1000 , 如7.87 x 228.0 / 1000 = 1.79 KW */}
-              <span className="text-[#01F2CF] text-[13px]">設備功率</span>
-            </div>
-            {/* <div className="border-r-2 border-[#4F4F4F] flex-1">
-              <div className="text-[22px]">3.1度</div>
               <span className="text-[#01F2CF] text-[13px]">已充電量</span>
-            </div> */}
+            </div>
             <div className="border-r-2 border-[#4F4F4F] flex-1">
               <div className="text-[22px]">
-                {Math.trunc(endupData?.fee) || 0} 元
+                {Math.round(endupData?.fee) || 0} 元
               </div>
-              <span className="text-[#01F2CF] text-[13px]">預估金額</span>
+              <span className="text-[#01F2CF] text-[13px]">充電金額</span>
             </div>
           </div>
           <div className="flex flex-col gap-2 text-[13px] my-[30px]">
             <div className="flex justify-between">
-              <span>一般費率</span> <span>{Math.trunc(endupData?.fee)}</span>
+              <span>一般費率</span> <span>{Math.round(endupData?.energyFee) || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span>新會員優惠</span> <span>-0</span>
+              <span>新會員優惠</span> <span>-{Math.round(endupData?.discountAmount) || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span>訂單金額</span> <span>{Math.trunc(endupData?.fee)}</span>
+              <span>訂單金額</span> <span>{Math.round(endupData?.fee) || 0}</span>
             </div>
 
             <hr />
 
             <div className="flex justify-between">
               <span>充電時間</span>{" "}
-              <span>{`${dayjs(endupData?.startTime).format(
+              <span>{endupData?.startTime && endupData?.endTime ? `${dayjs(endupData?.startTime).format(
                 "YYYY/MM/DD HH:mm"
-              )}~${dayjs(endupData?.endTime).format("HH:mm")}`}</span>
+              )}~${dayjs(endupData?.endTime).format("HH:mm")}` : '-'}</span>
             </div>
             <div className="flex justify-between">
-              <span>充電站</span> <span>{endupData?.station?.name}</span>
+              <span>充電站</span> <span>{endupData?.station?.name || '-'}</span>
             </div>
             <div className="flex justify-between">
-              <span>充電樁編號</span> <span>{cpId.current}</span>
+              <span>充電樁編號</span> <span>{endupData?.cpid || cpId.current}</span>
             </div>
+            <div className="flex justify-between">
+              <span>交易編號</span> <span>{endupData?.transactionId || '-'}</span>
+            </div>
+            {endupData?.tariffName && (
+              <div className="flex justify-between">
+                <span>電價方案</span> <span>{endupData.tariffName}</span>
+              </div>
+            )}
           </div>
 
           <button

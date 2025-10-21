@@ -83,7 +83,7 @@ const CpopCharging = () => {
       cpInterval = setInterval(() => {
         checkCpStatus();
         console.log("current status -- ", cpStatus.current);
-      }, 3000); //3sec
+      }, 5000);
       checkCpStatus();
     }, 1000);
   };
@@ -94,6 +94,7 @@ const CpopCharging = () => {
     // Parse new backend JSON format
     const cpData = response?.data;
     const transaction = cpData?.transaction;
+    const realtimeCost = cpData?.realtime_cost;
     
     const state = {
       cpIdKey: cpData?.cpid,
@@ -104,6 +105,7 @@ const CpopCharging = () => {
       currentPower: transaction?.current_power || 0, // 當前功率
       currentVoltage: transaction?.current_voltage || 0, // 當前電壓
       currentCurrent: transaction?.current_current || 0, // 當前電流
+      estimatedFee: realtimeCost?.estimated_total || null, // 真實費用（如果有的話）
     }
     setChargingData(state);
 
@@ -122,19 +124,53 @@ const CpopCharging = () => {
 
   const cpStart = async () => {
     console.log("CpopCharging cpStart =>", JSON.stringify(data, null, 2));
-    cpStartCmdFromBackend(userUuid, cpId.current)
-      .then(async (rsp) => {
-        console.log(rsp);
-        try {
-          await roundStart();
-          polling();
-        } catch (error) {
-          console.log(error.message);
-        } finally {
-          setLoading(false);
-        }
-      })
-      .catch((err) => console.log(err.message));
+    
+    try {
+      // First check current CP status
+      const currentStatus = await getCpStatus();
+      const cpData = currentStatus?.data;
+      const transaction = cpData?.transaction;
+      const gunsStatus = cpData?.guns_status;
+      const transactionUserId = transaction?.user_id;
+      
+      console.log("CpopCharging cpStart data =>", JSON.stringify(data, null, 2));
+      console.log("Current CP status:", gunsStatus);
+      console.log("Transaction user_id:", transactionUserId);
+      console.log("Current userUuid:", userUuid);
+      
+      // If already charging AND occupied by current user, just start polling
+      if (gunsStatus === "Charging" && transactionUserId === userUuid) {
+        console.log("CP already charging by current user, skip start command and begin polling");
+        polling();
+        setLoading(false);
+        return;
+      }
+      
+      // If charging but occupied by another user, show error
+      if (gunsStatus === "Charging" && transactionUserId !== userUuid) {
+        console.error("CP is being used by another user");
+        alert("此充電樁正在被其他使用者使用");
+        router.push("station-map");
+        setLoading(false);
+        return;
+      }
+      
+      // If not charging, send start command
+      const rsp = await cpStartCmdFromBackend(userUuid, cpId.current);
+      console.log(rsp);
+      
+      try {
+        await roundStart();
+        polling();
+      } catch (error) {
+        console.log(error.message);
+      } finally {
+        setLoading(false);
+      }
+    } catch (err) {
+      console.log("cpStart error:", err.message);
+      setLoading(false);
+    }
   };
 
   const cpStop = async () => {
@@ -258,7 +294,7 @@ const CpopCharging = () => {
           </div>
           <div className="border-r-2 border-[#4F4F4F] flex-1">
             <div className="text-[22px]">
-              {Math.round((chargingData?.currentkWh || 0) * 10)} 元
+              {chargingData?.estimatedFee || 0} 元
             </div>
             <span className="text-[#01F2CF] text-[13px]">預估金額</span>
           </div>

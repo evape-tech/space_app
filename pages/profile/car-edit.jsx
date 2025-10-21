@@ -82,7 +82,7 @@ const CarEdit = () => {
     >
       <Select
         label="廠牌"
-        data={brands.map((b) => ({ value: String(b.id), label: b.name }))}
+        data={brands.map((b) => ({ value: String(b.id), label: `${b.name} (${b.nameEn})` }))}
         placeholder="請選擇廠牌"
         className="w-full"
         withAsterisk
