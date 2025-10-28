@@ -28,12 +28,12 @@ const Recharge = () => {
   const [ecpayForm, setEcpayForm] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("tappay_credit"); // 預設信用卡
 
-  // 支付方式選項 - 只使用 TapPay
+  // 支付方式選項 - TapPay 支援的四個通道
   const paymentMethods = [
     { id: "tappay_credit", name: "信用卡", icon: "💳", description: "Visa / Master / JCB" },
-    { id: "tappay_line", name: "LINE Pay", icon: "🟢", description: "LINE Pay 付款" },
-    { id: "tappay_apple", name: "Apple Pay", icon: "🍎", description: "Apple Pay 快速付款" },
-    { id: "tappay_google", name: "Google Pay", icon: "🔵", description: "Google Pay 付款" },
+    { id: "tappay_jkopay", name: "全盈Pay", icon: "💳", description: "街口支付 / 全盈+PAY" },
+    { id: "tappay_line", name: "LINE Pay", icon: "💳", description: "LINE Pay 付款" },
+    { id: "tappay_easycard", name: "悠游付", icon: "💳", description: "悠遊卡 Easy Wallet" },
   ];
 
   const navTo = (path) => {
@@ -97,14 +97,14 @@ const Recharge = () => {
           case "tappay_credit":
             paymentType = "credit_card";
             break;
+          case "tappay_jkopay":
+            paymentType = "jkopay";
+            break;
           case "tappay_line":
             paymentType = "line_pay";
             break;
-          case "tappay_apple":
-            paymentType = "apple_pay";
-            break;
-          case "tappay_google":
-            paymentType = "google_pay";
+          case "tappay_easycard":
+            paymentType = "easycard";
             break;
           default:
             paymentType = "credit_card";
