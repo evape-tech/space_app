@@ -55,7 +55,8 @@ export function getChargeTxFromBackend(token) {
         url: `${baseUrl}/users/me/transactions`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }
@@ -67,7 +68,8 @@ export function getChargeTxLastestFromBackend(token) {
         url: `${baseUrl}/users/me/transactions?mode=latest`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }
@@ -80,7 +82,8 @@ export function getChargeTariffsFromBackend(token, transactionId) {
         method: 'post',
         headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
         data: {
             transaction_id: transactionId
@@ -95,7 +98,8 @@ export function getUserProfileFromBackend(token) {
         url: `${baseUrl}/users/me`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }

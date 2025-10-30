@@ -10,8 +10,8 @@ export default class _Document extends Document {
     return (
       <Html>
         <Head>
-          {/* TapPay SDK */}
-          <script src="https://js.tappaysdk.com/sdk/tpdirect/v5.14.0"></script>
+          {/* TapPay SDK - 更新至最新版本 v5.19.2 */}
+          <script src="https://js.tappaysdk.com/sdk/tpdirect/v5.19.2"></script>
         </Head>
         <body>
           <Main />

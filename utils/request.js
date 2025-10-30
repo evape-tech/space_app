@@ -39,6 +39,9 @@ service.interceptors.request.use(
     config => {
         // do something before request is sent
 
+        // Add ngrok-skip-browser-warning header to bypass ngrok warning page
+        // config.headers['ngrok-skip-browser-warning'] = 'true'
+
         // if (store.getters.token) {
         //     // let each request carry token
         //     // ['X-Token'] is a custom headers key

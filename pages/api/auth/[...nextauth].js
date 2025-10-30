@@ -44,7 +44,10 @@ export const authOptions = {
                     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
                     const res = await fetch(`${backendUrl}/auth/thirdparty`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'ngrok-skip-browser-warning': 'true'
+                        },
                         body: JSON.stringify({
                             provider: 'phone',
                             phone: credentials.phoneNo

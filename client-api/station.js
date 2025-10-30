@@ -22,6 +22,9 @@ export function getStationFromBackend(stationId) {
 
     return request({
         url,
-        method: 'get'
+        method: 'get',
+        headers: {
+            'ngrok-skip-browser-warning': 'true'
+        }
     })
 }

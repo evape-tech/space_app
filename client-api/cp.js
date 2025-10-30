@@ -29,6 +29,9 @@ export function cpCmdFromBackend(cmd, cpid) {
   return request({
     url: `${baseUrl}/guns/status?cpid=${encodeURIComponent((cpid || '').toLowerCase())}`,
     method: "get",
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
   });
 }
 
@@ -39,6 +42,9 @@ export function cpStartCmdFromBackend(uuid, cpid) {
     // Call backend OCPP proxy endpoint to start charging
     url: `${baseUrl}/guns/ocpp`,
     method: "post",
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    },
     data: {
       cmd: "cmd_start_charging",
       cpid: cpid,
@@ -55,6 +61,9 @@ export function cpStopCmdFromBackend(uuid, cpid) {
     // Call backend OCPP proxy endpoint to stop charging
     url: `${baseUrl}/guns/ocpp`,
     method: "post",
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    },
     data: {
       cmd: "cmd_stop_charging",
       cpid: cpid,
@@ -110,6 +119,9 @@ export function getCpsnByKeyFromBackend(cpsn) {
   return request({
     url: `${baseUrl}/guns?cpsn=${encodeURIComponent((cpid || '').toLowerCase())}`,
     method: "get",
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
   });
 }
 
@@ -119,6 +131,9 @@ export function getCpidByKeyFromBackend(cpid) {
   return request({
     url: `${baseUrl}/guns?cpid=${encodeURIComponent((cpid || '').toLowerCase())}`,
     method: "get",
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
   });
 }
 

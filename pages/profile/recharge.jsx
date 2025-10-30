@@ -17,23 +17,19 @@ const ShowHTML = ({ html }) => {
 const Recharge = () => {
   const router = useRouter();
 
-  const {
-    data: {
-      user: { id: userId },
-    },
-  } = useSession();
+  const { data: session } = useSession();
 
   const [points, setPoints] = useState(100);
   const [inputValid, setInputValid] = useState(true);
   const [ecpayForm, setEcpayForm] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("tappay_credit"); // 預設信用卡
+  const [loading, setLoading] = useState(false);
 
-  // 支付方式選項 - TapPay 支援的四個通道
+  // 支付方式選項 - TapPay 支援的通道
   const paymentMethods = [
     { id: "tappay_credit", name: "信用卡", icon: "💳", description: "Visa / Master / JCB" },
-    { id: "tappay_jkopay", name: "全盈Pay", icon: "💳", description: "街口支付 / 全盈+PAY" },
-    { id: "tappay_line", name: "LINE Pay", icon: "💳", description: "LINE Pay 付款" },
-    { id: "tappay_easycard", name: "悠游付", icon: "💳", description: "悠遊卡 Easy Wallet" },
+    { id: "tappay_line", name: "LINE Pay", icon: "�", description: "LINE Pay 付款" },
+    { id: "tappay_easycard", name: "悠游付", icon: "🎫", description: "悠遊卡 Easy Wallet" },
   ];
 
   const navTo = (path) => {
@@ -56,72 +52,133 @@ const Recharge = () => {
   };
 
   const genOrderTxNo = () => {
-    return new Promise(async (resolve, reject) => {
-      await orderSeq()
-        .then((rsp) => {
-          console.log(rsp);
-          let seqNo = rsp?.seqNo;
-          if (seqNo > 999) {
-            resetSeqNo();
-            seqNo = 0;
-          }
-          let dayFormat = `${dayjs().format("YYMMDD")}`; // some day
-          seqNo = "Z" + dayFormat + padZero(seqNo + "", 3);
-          resolve(seqNo);
-        })
-        .catch((err) => {
-          console.log(err);
-          reject(err);
-        });
-    });
-
-    return orderNo;
+    // 直接產生訂單號，不呼叫 API/DB
+    const dayFormat = dayjs().format("YYMMDD");
+    // 取 3 位隨機數字（可改用 userId/時間戳/uuid）
+    const random = Math.floor(100 + Math.random() * 900); // 100~999
+    return `Z${dayFormat}${random}`;
   };
 
   const handleRecharge = async () => {
-    const orderTxNo = await genOrderTxNo();
+    const orderTxNo = genOrderTxNo();
+    // 本地組合 orderData，僅用於支付流程
+    const orderData = {
+      orderNo: orderTxNo,
+      userId: session?.user?.id,
+      qty: +points,
+      unitPrice: 1,
+      amount: +points * 1,
+      status: "unpaid"
+    };
 
-    const orderData = { orderNo: orderTxNo, userId, qty: points };
+    setLoading(true);
 
-    orderData.qty = +points;
-    orderData.unitPrice = 1;
-    orderData.amount = orderData.qty * orderData.unitPrice;
-    orderData.status = "unpaid";
+    // 根據選擇的支付方式分支處理
+    switch (selectedPayment) {
+      case "tappay_line": {
+        console.log('🔄 LINE Pay 支付流程開始，金額:', orderData.amount);
+        if (typeof window !== "undefined" && window.TPDirect) {
+          window.TPDirect.setupSDK(
+            parseInt(process.env.NEXT_PUBLIC_TAPPAY_APP_ID),
+            process.env.NEXT_PUBLIC_TAPPAY_APP_KEY,
+            process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE || 'sandbox'
+          );
+          console.log('✅ TapPay SDK 初始化完成');
 
-    createOrder(orderData)
-      .then((rsp) => {
-        // 根據選擇的支付方式導向 TapPay 支付頁面
-        let paymentType = "credit_card"; // 預設信用卡
-        
-        switch (selectedPayment) {
-          case "tappay_credit":
-            paymentType = "credit_card";
-            break;
-          case "tappay_jkopay":
-            paymentType = "jkopay";
-            break;
-          case "tappay_line":
-            paymentType = "line_pay";
-            break;
-          case "tappay_easycard":
-            paymentType = "easycard";
-            break;
-          default:
-            paymentType = "credit_card";
+          // 直接取得 LINE Pay Prime（不需要任何表單）
+          window.TPDirect.linePay.getPrime(async (result) => {
+            console.log('LINE Pay getPrime result:', result);
+            if (result.status !== 0) {
+              alert('取得 LINE Pay 付款資訊失敗: ' + result.msg);
+              setLoading(false);
+              return;
+            }
+            const prime = result.prime;
+            console.log('✅ LINE Pay Prime 取得成功:', prime);
+            try {
+              // 將 Prime 交給後端
+              const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+              const response = await fetch(`${baseUrl}/users/me/payment/create-order`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session?.accessToken}`,
+                  'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({
+                  amount: parseInt(orderData.amount),
+                  description: '充電站充值',
+                  transactionId: orderTxNo,
+                  paymentMethod: 'line_pay',
+                  metadata: {
+                    prime: prime,
+                    result_url: {
+                      frontend_redirect_url: `${window.location.origin}/profile/payment-result`,
+                      backend_notify_url: `${baseUrl}/payment/callback`
+                    }
+                  }
+                }),
+              });
+              const data = await response.json();
+              console.log('後端回應:', data);
+              // 支援不同命名的 payment url
+              const paymentUrl = data?.payment_url || data?.paymentUrl || data?.paymentURL || data?.payment_url?.url;
+              if (paymentUrl) {
+                console.log('🔗 跳轉到 LINE Pay 支付頁面:', paymentUrl);
+                window.location.href = paymentUrl;
+                return; // 已跳轉，結束
+              }
+              if (response.ok && data.success) {
+                alert('付款成功！');
+                router.push('/');
+                return;
+              }
+              alert('付款失敗: ' + (data.message || '未知錯誤'));
+              setLoading(false);
+            } catch (error) {
+              console.error('LINE Pay error:', error);
+              alert('付款過程發生錯誤: ' + error.message);
+              setLoading(false);
+            }
+          });
+        } else {
+          // TPDirect 未載入
+          alert('付款元件尚未載入，請稍後再試');
+          setLoading(false);
         }
+        return;
+      }
 
-        // 統一導向 TapPay 支付頁面
+      case "tappay_credit":
+      case "tappay_easycard": {
+        // 信用卡或悠遊付 - 導向 TapPay 支付頁面
+        const paymentMethod = selectedPayment === 'tappay_easycard' ? 'easycard' : 'credit_card';
         router.push({
           pathname: "/profile/tappay-payment",
           query: {
             amount: orderData.amount,
             orderId: orderTxNo,
             details: "充電站充值",
-            paymentType: paymentType
+            paymentMethod: paymentMethod
           }
         });
-      })
-      .catch((err) => console.log(err.message));
+        return;
+      }
+
+      default: {
+        // fallback -> 導向信用卡流程
+        router.push({
+          pathname: "/profile/tappay-payment",
+          query: {
+            amount: orderData.amount,
+            orderId: orderTxNo,
+            details: "充電站充值",
+            paymentMethod: 'credit_card'
+          }
+        });
+        return;
+      }
+    }
   };
 
   if (ecpayForm) return <ShowHTML html={ecpayForm} />;
@@ -232,12 +289,12 @@ const Recharge = () => {
         type="button"
         className={`py-3 px-4 rounded-full w-full mt-4 ${clsx(
           styles["btn-primary"],
-          !inputValid && styles.disabled
+          (!inputValid || loading) && styles.disabled
         )}`}
         onClick={handleRecharge}
-        disabled={!inputValid}
+        disabled={!inputValid || loading}
       >
-        前往付款 NT$ {points}
+        {loading ? (selectedPayment === "tappay_line" ? '取得付款資訊中...' : '處理中...') : `前往付款 NT$ ${points}`}
       </button>
     </div>
   );

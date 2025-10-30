@@ -19,14 +19,15 @@ const TappayPayment = () => {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.TPDirect) {
-      // 初始化 TapPay SDK
+      // Step 2: 初始化 TapPay SDK（官方建議方式）
       window.TPDirect.setupSDK(
-        process.env.NEXT_PUBLIC_TAPPAY_APP_ID,
+        parseInt(process.env.NEXT_PUBLIC_TAPPAY_APP_ID),
         process.env.NEXT_PUBLIC_TAPPAY_APP_KEY,
         process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE || 'sandbox'
       );
+      console.log('✅ TapPay SDK 初始化完成');
 
-      // 設置信用卡表單
+      // 信用卡支付需要設置 TapPay Fields
       window.TPDirect.card.setup({
         fields: {
           number: {
@@ -94,7 +95,7 @@ const TappayPayment = () => {
 
     setLoading(true);
 
-    // 取得 Prime
+    // 取得信用卡 Prime
     window.TPDirect.card.getPrime(async (result) => {
       if (result.status !== 0) {
         alert('取得付款資訊失敗: ' + result.msg);
@@ -103,47 +104,79 @@ const TappayPayment = () => {
       }
 
       const prime = result.card.prime;
-      console.log('Prime:', prime);
+      console.log('✅ Prime 取得成功:', prime);
+      console.log('📋 訂單資訊:', {
+        amount: parseInt(amount),
+        orderId: orderId,
+        details: details || '充電站充值',
+        name: cardholderName,
+        email: cardholderEmail,
+        phone: cardholderPhone,
+        userId: session?.user?.id
+      });
 
       try {
-        // 呼叫後端 API 進行支付
-        const response = await fetch('/api/tappay/pay-by-prime', {
+        // 呼叫後端 API 建立訂單並進行支付
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+        const response = await fetch(`${baseUrl}/users/me/payment/create-order`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.accessToken}`,
+            'ngrok-skip-browser-warning': 'true'
           },
           body: JSON.stringify({
-            prime: prime,
             amount: parseInt(amount),
-            orderId: orderId,
-            details: details || '充電站充值',
-            name: cardholderName,
-            email: cardholderEmail,
-            phone: cardholderPhone,
-            userId: session?.user?.id
+            description: details || '充電站充值',
+            transactionId: orderId,
+            paymentMethod: 'credit_card',
+            metadata: {
+              prime: prime,
+              name: cardholderName,
+              phone: cardholderPhone,
+              email: cardholderEmail
+            }
           }),
         });
 
         const data = await response.json();
+        console.log('後端回應:', data);
 
-        if (data.success) {
-          alert('付款成功！');
-          router.push('/profile/recharge-history');
+        if (response.ok && data.success) {
+          // 檢查是否需要 3D 驗證
+          if (data.paymentUrl) {
+            console.log('🔐 需要 3DS 驗證，跳轉到驗證頁面:', data.paymentUrl);
+            // 需要 3D 驗證，重定向用戶到驗證頁面
+            window.location.href = data.paymentUrl;
+            // 注意：跳轉後 loading 狀態會保持，因為頁面會離開
+          } else if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
+            // 直接扣款成功（不需要 3DS）
+            console.log('✅ 付款成功（無需 3DS）');
+            alert('付款成功！');
+            router.push('/');
+          } else {
+            // 其他成功狀態
+            console.log('✅ 付款處理完成:', data.status);
+            alert('付款成功！');
+            router.push('/');
+          }
         } else {
-          alert('付款失敗: ' + data.message);
+          // 付款失敗
+          console.error('❌ 付款失敗:', data);
+          alert('付款失敗: ' + (data.message || data.error || '未知錯誤'));
+          setLoading(false); // 失敗時重置 loading，允許用戶重試
         }
       } catch (error) {
         console.error('Payment error:', error);
         alert('付款過程發生錯誤: ' + error.message);
-      } finally {
-        setLoading(false);
+        setLoading(false); // 錯誤時重置 loading
       }
     });
   };
 
   return (
     <div className="flex flex-col h-full gap-[20px] p-[20px]">
-      <div className="text-[18px] font-medium mb-[10px]">信用卡付款</div>
+      <div className="text-[18px] font-medium mb-[10px]">信用卡付款 💳</div>
       
       <div className="flex flex-col gap-4">
         {/* 付款金額 */}
@@ -154,9 +187,10 @@ const TappayPayment = () => {
 
         {/* 持卡人資訊 */}
         <div className="flex flex-col gap-3">
+          <div className="text-sm font-medium">持卡人資訊</div>
           <input
             type="text"
-            placeholder="持卡人姓名"
+            placeholder="姓名"
             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
             value={cardholderName}
             onChange={(e) => setCardholderName(e.target.value)}
@@ -177,7 +211,7 @@ const TappayPayment = () => {
           />
         </div>
 
-        {/* TapPay 信用卡表單 */}
+        {/* 信用卡表單 */}
         <div className="flex flex-col gap-3">
           <div className="text-sm font-medium">信用卡資訊</div>
           
@@ -211,7 +245,10 @@ const TappayPayment = () => {
           onClick={handlePayment}
           disabled={!canPay || loading}
         >
-          {loading ? '處理中...' : `確認付款 NT$ ${amount}`}
+          {loading 
+            ? '處理中...' 
+            : `前往付款 NT$ ${amount}`
+          }
         </button>
 
         <button
@@ -242,7 +279,7 @@ export default TappayPayment;
 
 TappayPayment.getLayout = function getLayout(page) {
   return (
-    <Layout header={<Navbar title="信用卡付款" />}>
+    <Layout header={<Navbar title="付款" />}>
       {page}
     </Layout>
   );

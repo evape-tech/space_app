@@ -35,7 +35,8 @@ export function getRechargesFromBackend(token) {
         url: `${baseUrl}/users/me/topups`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }
@@ -47,7 +48,8 @@ export function getUserWalletBalanceFromBackend(token) {
         url: `${baseUrl}/users/me/wallet`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }

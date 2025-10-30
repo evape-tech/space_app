@@ -15,7 +15,10 @@ export function getCarsBrandsListFromBackend() {
     
     return request({
         url: `${baseUrl}/users/me/vehicles/brands`,
-        method: 'get'
+        method: 'get',
+        headers: {
+            'ngrok-skip-browser-warning': 'true'
+        }
     })
 }
 
@@ -26,7 +29,8 @@ export function getUserCarsFromBackend(token) {
         url: `${baseUrl}/users/me/vehicles`,
         method: 'get',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }
@@ -59,7 +63,8 @@ export function createCarForBackend(data, token) {
         url: `${baseUrl}/users/me/vehicles`,
         method: 'post',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         },
         data
     })
@@ -90,7 +95,8 @@ export function deleteCarForBackend(id, token) {
         url: `${baseUrl}/users/me/vehicles/${id}`,
         method: 'delete',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
         }
     })
 }
