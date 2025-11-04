@@ -53,3 +53,23 @@ export function getUserWalletBalanceFromBackend(token) {
         }
     })
 }
+
+export function createPaymentOrderFromBackend(token, orderData) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+    
+    return fetch(`${baseUrl}/users/me/payment/create-order`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(orderData)
+    }).then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || data.error || 'API 請求失敗');
+        }
+        return data;
+    });
+}

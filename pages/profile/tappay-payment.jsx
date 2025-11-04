@@ -5,6 +5,7 @@ import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import styles from "@/styles/verify-code.module.scss";
 import clsx from "clsx";
+import { createPaymentOrderFromBackend } from "@/client-api/recharge";
 
 const TappayPayment = () => {
   const router = useRouter();
@@ -117,37 +118,27 @@ const TappayPayment = () => {
 
       try {
         // 呼叫後端 API 建立訂單並進行支付
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-        const response = await fetch(`${baseUrl}/users/me/payment/create-order`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.accessToken}`,
-            'ngrok-skip-browser-warning': 'true'
-          },
-          body: JSON.stringify({
-            amount: parseInt(amount),
-            description: details || '充電站充值',
-            transactionId: orderId,
-            paymentMethod: 'credit_card',
-            metadata: {
-              prime: prime,
-              name: cardholderName,
-              phone: cardholderPhone,
-              email: cardholderEmail
-            }
-          }),
-        });
-
-        const data = await response.json();
+        const orderData = {
+          amount: parseInt(amount),
+          description: details || '充電站充值',
+          transactionId: orderId,
+          paymentMethod: 'credit_card',
+          metadata: {
+            prime: prime,
+            name: cardholderName,
+            phone: cardholderPhone,
+            email: cardholderEmail
+          }
+        };
+        const data = await createPaymentOrderFromBackend(session?.accessToken, orderData);
         console.log('後端回應:', data);
 
-        if (response.ok && data.success) {
+        if (data.success) {
           // 檢查是否需要 3D 驗證
-          if (data.paymentUrl) {
-            console.log('🔐 需要 3DS 驗證，跳轉到驗證頁面:', data.paymentUrl);
+          if (data.payment_url) {
+            console.log('🔐 需要 3DS 驗證，跳轉到驗證頁面:', data.payment_url);
             // 需要 3D 驗證，重定向用戶到驗證頁面
-            window.location.href = data.paymentUrl;
+            window.location.href = data.payment_url;
             // 注意：跳轉後 loading 狀態會保持，因為頁面會離開
           } else if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
             // 直接扣款成功（不需要 3DS）
