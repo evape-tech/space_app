@@ -7,6 +7,7 @@ import clsx from "clsx";
 import {useSession} from "next-auth/react";
 import dayjs from "dayjs";
 import { createPaymentOrderFromBackend } from '@/client-api/recharge';
+import Image from "next/image";
 
 const ShowHTML = ({html}) => {
   // const html = "<h1>hello</h1>";
@@ -25,9 +26,9 @@ const Recharge = () => {
 
   // 支付方式選項 - TapPay 支援的通道
   const paymentMethods = [
-    {id: "tappay_credit", name: "信用卡", icon: "💳", description: "Visa / Master / JCB"},
-    {id: "tappay_line", name: "LINE Pay", icon: "�", description: "LINE Pay 付款"},
-    {id: "tappay_easywallet", name: "悠游付", icon: "🎫", description: "悠遊卡 Easy Wallet"},
+    {id: "tappay_credit", name: "信用卡", icon: "/images/ic_credit_card.png", description: "Visa / Master / JCB", isImage: true},
+    {id: "tappay_line", name: "LINE Pay", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款", isImage: true},
+    {id: "tappay_easywallet", name: "悠游付", icon: "/images/ic_easy_wallet.png", description: "悠遊卡 Easy Wallet", isImage: true},
   ];
 
   const validInput = (v) => {
@@ -344,7 +345,13 @@ const Recharge = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{method.icon}</span>
+                      {method.isImage ? (
+                          <div className="w-8 h-8 relative flex-shrink-0">
+                            <Image src={method.icon} alt={method.name} fill className="object-contain" />
+                          </div>
+                      ) : (
+                          <span className="text-2xl">{method.icon}</span>
+                      )}
                       <div>
                         <div className="font-medium">{method.name}</div>
                         <div className="text-xs text-gray-500">{method.description}</div>

@@ -34,8 +34,9 @@ const RechargeItem = ({ recharge }) => {
   const getPaymentMethodText = (method) => {
     const methodMap = {
       'credit_card': '信用卡',
-      'bank_transfer': '銀行轉帳',
-      'cash': '現金',
+      'easy_wallet': '悠遊付',
+      'line_pay': 'Line Pay',
+      'plus_pay': '全盈 Pay',
       'other': '其他'
     };
     return methodMap[method] || method;

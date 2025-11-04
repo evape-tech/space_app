@@ -8,6 +8,9 @@ import request from '@/utils/request'
 //     })
 // }
 
+/**
+ * @deprecated
+ */
 export function updateProfile(data, uid) {
     return request({
         url: `/users/${uid}`,
@@ -16,6 +19,9 @@ export function updateProfile(data, uid) {
     })
 }
 
+/**
+ * @deprecated
+ */
 export function getProfileById(uid) {
     return request({
         url: `/users/${uid}`,
@@ -101,5 +107,20 @@ export function getUserProfileFromBackend(token) {
             'Authorization': `Bearer ${token}`,
             'ngrok-skip-browser-warning': 'true'
         }
+    })
+}
+
+export function updateUserProfileFromBackend(token, data) {
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
+
+    return request({
+        url: `${baseUrl}/users/me`,
+        method: 'patch',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+        },
+        data
     })
 }
