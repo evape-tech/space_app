@@ -25,9 +25,9 @@ const StationMap = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [showProfileWarning, setShowProfileWarning] = useState(false);
   const [banners, setBanners] = useState([
-    { id: 1, image: '/images/banner.webp', title: 'Banner 1' },
-    { id: 2, image: '/images/banner.webp', title: 'Banner 2' },
-    { id: 3, image: '/images/banner.webp', title: 'Banner 3' },
+    { id: 1, image: '', title: 'Banner 1' },
+    { id: 2, image: '', title: 'Banner 2' },
+    { id: 3, image: '', title: 'Banner 3' },
   ]);
   const [announcements, setAnnouncements] = useState([
     { id: 1, title: '系統維護通知', date: '2025-10-13', content: '系統將於本週末進行維護' },
@@ -206,7 +206,7 @@ const StationMap = () => {
               {banners.map((banner) => (
                 <Carousel.Slide key={banner.id}>
                   <div 
-                    className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-xl font-bold"
+                    className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-black text-xl font-bold"
                     style={{
                       backgroundImage: `url(${banner.image})`,
                       backgroundSize: 'cover',
