@@ -2,7 +2,10 @@ import axios from 'axios'
 // import { MessageBox, Message } from 'element-ui'
 // import store from '@/store'
 // import { getToken } from '@/utils/auth'
-const baseUrl = process.env.NEXT_PUBLIC_BASE_API
+// Default base URL for axios:
+// - If running in browser with NEXT_PUBLIC_BASE_API set, use it (client-side direct API)
+// - Otherwise fallback to '/api' which will be handled by the Next.js server (proxy)
+const baseUrl = (typeof window !== 'undefined') ? (process.env.NEXT_PUBLIC_BASE_API || '/api') : '/api'
 
 // Global flag to prevent multiple 401 redirects
 let isRedirectingTo401 = false

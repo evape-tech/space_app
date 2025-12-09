@@ -1,0 +1,26 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_API: ${NEXT_PUBLIC_BACKEND_API}
+        NEXT_PUBLIC_BASE_API: ${NEXT_PUBLIC_BASE_API}
+    container_name: space-app-web
+    restart: always
+    ports:
+      - "3010:3010"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: node server.js
+    networks:
+      - csms-network
+
+networks:
+  csms-network:
+    name: csms-nextjs_csms-network
+    external: true
