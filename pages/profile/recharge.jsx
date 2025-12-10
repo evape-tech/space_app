@@ -51,18 +51,40 @@ const Recharge = () => {
   };
 
   const initTapPaySDK = () => {
-    if (typeof window === "undefined" || !window.TPDirect) {
+    if (typeof window === "undefined") {
+      console.error('❌ Window is undefined');
+      alert('環境不支持，請稍後再試');
+      return false;
+    }
+
+    if (!window.TPDirect) {
+      console.error('❌ TapPay SDK 尚未載入', {
+        hasWindow: !!window,
+        hasTPDirect: !!window.TPDirect,
+        windowKeys: Object.keys(window).filter(k => k.includes('TP') || k.includes('tap'))
+      });
       alert('付款元件尚未載入，請稍後再試');
       return false;
     }
 
-    window.TPDirect.setupSDK(
+    try {
+      console.log('🔧 TapPay SDK 初始化參數:', {
+        appId: process.env.NEXT_PUBLIC_TAPPAY_APP_ID,
+        serverType: process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE
+      });
+
+      window.TPDirect.setupSDK(
         parseInt(process.env.NEXT_PUBLIC_TAPPAY_APP_ID),
         process.env.NEXT_PUBLIC_TAPPAY_APP_KEY,
         process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE
-    );
-    console.log('✅ TapPay SDK 初始化完成');
-    return true;
+      );
+      console.log('✅ TapPay SDK 初始化完成');
+      return true;
+    } catch (error) {
+      console.error('❌ TapPay SDK 初始化失敗:', error);
+      alert('付款初始化失敗: ' + error.message);
+      return false;
+    }
   };
 
   const handleRecharge = async () => {
@@ -117,7 +139,7 @@ const Recharge = () => {
                 prime: prime,
                 result_url: {
                   frontend_redirect_url: `${window.location.origin}/profile/payment-result`,
-                  backend_notify_url: `${process.env.NEXT_PUBLIC_BACKEND_API}/payment/callback`
+                  backend_notify_url: `${process.env.NEXT_PUBLIC_BACKEND_API}/payment/tappay-callback`
                 }
               }
             };
@@ -186,7 +208,7 @@ const Recharge = () => {
                 prime: prime,
                 result_url: {
                   frontend_redirect_url: `${window.location.origin}/profile/payment-result`,
-                  backend_notify_url: `${process.env.NEXT_PUBLIC_BACKEND_API}/payment/callback`
+                  backend_notify_url: `${process.env.NEXT_PUBLIC_BACKEND_API}/payment/tappay-callback`
                 }
               }
             };

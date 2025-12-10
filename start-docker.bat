@@ -20,8 +20,16 @@ for /f "tokens=*" %%i in ('docker images -f "dangling=true" -q 2^>nul') do (
 )
 echo Dangling images cleaned.
 
-echo Building and starting containers...
-docker-compose up -d --build
+echo Loading environment variables from .env.production...
+for /f "usebackq tokens=1,* delims==" %%A in (".env.production") do (
+    if not "%%A"=="" if not "%%A:~0,1%"=="#" (
+        set "%%A=%%B"
+    )
+)
+
+echo Building and starting containers (with no cache)...
+docker-compose build --no-cache
+docker-compose up -d
 
 if %errorlevel% neq 0 (
     echo Failed to start containers.

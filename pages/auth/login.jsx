@@ -108,7 +108,7 @@ const Login = ({ providers }) => {
         {modalText}
       </Modal>
       <div className="logo w-[65%] mx-auto flex justify-center items-center">
-        <img src="/images/brand_icon.webp" alt="brand icon" className="w-full h-auto object-contain rounded-lg" />
+        <img src="/images/brand_icon.png" alt="brand icon" className="w-full h-auto object-contain rounded-lg" />
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-[30px]">
         <TextInput
@@ -164,6 +164,15 @@ const Login = ({ providers }) => {
         checked={accepted}
         onChange={(event) => setAccepted(event.currentTarget.checked)}
       />
+      
+      {/* Debug: Display backend API URL */}
+      <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-100 rounded">
+        <div><strong>Backend API:</strong></div>
+        <div className="break-all">{process.env.NEXT_PUBLIC_BACKEND_API || 'Not Set'}</div>
+        <div className="mt-2"><strong>Base API:</strong></div>
+        <div className="break-all">{process.env.NEXT_PUBLIC_BASE_API || 'Not Set'}</div>
+        <div className="mt-2"><strong>NODE_ENV:</strong> {process.env.NODE_ENV || 'Not Set'}</div>
+      </div>
     </div>
   );
 };

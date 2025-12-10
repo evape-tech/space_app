@@ -127,9 +127,15 @@ const TappayPayment = () => {
             prime: prime,
             name: cardholderName,
             phone: cardholderPhone,
-            email: cardholderEmail
+            email: cardholderEmail,
+            result_url: {
+              frontend_redirect_url: `${window.location.origin}/profile/payment-result`,
+              backend_notify_url: `${process.env.NEXT_PUBLIC_BACKEND_API}/payment/tappay-callback`
+            }
           }
         };
+        console.log('📤 準備發送到後端的資料:', JSON.stringify(orderData, null, 2));
+        console.log('📍 backend_notify_url:', orderData.metadata.result_url.backend_notify_url);
         const data = await createPaymentOrderFromBackend(session?.accessToken, orderData);
         console.log('後端回應:', data);
 
@@ -213,18 +219,6 @@ const TappayPayment = () => {
             <div className="tpfield flex-1" id="card-ccv"></div>
           </div>
         </div>
-
-        {/* 測試卡號提示 */}
-        {process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE === 'sandbox' && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-            <div className="font-medium text-yellow-800 mb-1">測試環境</div>
-            <div className="text-yellow-700">
-              測試卡號: 4242 4242 4242 4242<br />
-              到期日: 任意未來日期<br />
-              CVC: 任意 3 碼
-            </div>
-          </div>
-        )}
 
         {/* 付款按鈕 */}
         <button

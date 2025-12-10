@@ -13,7 +13,7 @@ services:
     environment:
       - NODE_ENV=production
     env_file:
-      - .env
+      - .env.production
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: node server.js

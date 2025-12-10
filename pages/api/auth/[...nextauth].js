@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google"
 import LineProvider from "next-auth/providers/line";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from '@/utils/db'
+import axios from 'axios'
 
 
 const baseApiUrl = process.env.NEXT_PUBLIC_BASE_API
@@ -15,6 +16,7 @@ const baseApiUrl = process.env.NEXT_PUBLIC_BASE_API
 export const authOptions = {
     // https://next-auth.js.org/configuration/providers/oauth
 
+    trustHost: true,
     session: {
         strategy: 'jwt',
         maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -42,22 +44,25 @@ export const authOptions = {
                 // 呼叫後端 thirdparty login API 取得 token
                 try {
                     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-                    const res = await fetch(`${backendUrl}/auth/thirdparty`, {
-                        method: 'POST',
+                    console.log('🔐 Authorize called with phone:', credentials.phoneNo);
+                    console.log('🌐 Backend URL:', backendUrl);
+                    
+                    const res = await axios.post(`${backendUrl}/auth/thirdparty`, {
+                        provider: 'phone',
+                        phone: credentials.phoneNo
+                    }, {
                         headers: { 
                             'Content-Type': 'application/json',
                             'ngrok-skip-browser-warning': 'true'
-                        },
-                        body: JSON.stringify({
-                            provider: 'phone',
-                            phone: credentials.phoneNo
-                        })
+                        }
                     });
 
-                    const data = await res.json();
+                    const data = res.data;
+                    console.log('📡 Backend response status:', res.status);
+                    console.log('📡 Backend response data:', JSON.stringify(data, null, 2));
 
-                    if (!res.ok || !data.success) {
-                        console.log('Thirdparty login failed:', data);
+                    if (res.status !== 200 || !data.success) {
+                        console.log('❌ Thirdparty login failed:', data);
                         return null;
                     }
 
@@ -76,7 +81,9 @@ export const authOptions = {
                         // refreshToken: data.refreshToken
                     };
                 } catch (error) {
-                    console.log('Authorize error:', error.message);
+                    console.error('❌ Authorize error:', error.message);
+                    console.error('❌ Error stack:', error.stack);
+                    console.error('❌ Error cause:', error.cause);
                     return null;
                 }
             }
@@ -212,6 +219,45 @@ export const authOptions = {
     // secret: "test",
     jwt: {
         secret: process.env.NEXTAUTH_SECRET
+    },
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    cookies: {
+        sessionToken: {
+            name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+            options: {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+            }
+        },
+        callbackUrl: {
+            name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+            options: {
+                httpOnly: false,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+            }
+        },
+        csrfToken: {
+            name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+            options: {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+            }
+        },
+        pkceCodeVerifier: {
+            name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.pkce.code_verifier`,
+            options: {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+            }
+        }
     }
 }
 

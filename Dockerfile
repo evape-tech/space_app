@@ -30,6 +30,8 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
+# Set NODE_ENV to production for build
+ENV NODE_ENV production
 # Inject build-time env vars for Next.js into the builder stage so they are embedded during `next build`.
 ENV NEXT_PUBLIC_BACKEND_API=${NEXT_PUBLIC_BACKEND_API}
 ENV NEXT_PUBLIC_BASE_API=${NEXT_PUBLIC_BASE_API}
@@ -37,10 +39,6 @@ ENV NEXT_PUBLIC_BASE_API=${NEXT_PUBLIC_BASE_API}
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
-
-# Debug: print build-time NEXT_PUBLIC vars
-RUN echo "Build arg NEXT_PUBLIC_BACKEND_API=${NEXT_PUBLIC_BACKEND_API}"
-RUN echo "Build arg NEXT_PUBLIC_BASE_API=${NEXT_PUBLIC_BASE_API}"
 
 # Build the Next.js application
 RUN npm run build
@@ -70,10 +68,18 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy full node_modules for Prisma and other dependencies
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Copy Prisma schema first
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# Copy full node_modules for Prisma and other dependencies
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Copy production environment file
+COPY --chown=nextjs:nodejs .env.production ./.env.production
+
+# Generate Prisma Client in the runner stage
+RUN npx prisma generate
 
 USER nextjs
 

@@ -7,8 +7,8 @@
   },
   "scripts": {
     "dev": "next dev -p 3010",
-    "build": "next build",
-    "start": "next start -p 3010",
+    "build": "cross-env NODE_ENV=production next build",
+    "start": "cross-env NODE_ENV=production next start -p 3010",
     "lint": "next lint --fix"
   },
   "dependencies": {
@@ -31,6 +31,7 @@
     "autoprefixer": "^10.4.13",
     "axios": "^1.2.5",
     "clsx": "^1.2.1",
+    "cors": "^2.8.5",
     "dayjs": "^1.11.7",
     "elementtree": "^0.1.7",
     "embla-carousel-react": "^7.0.7",
@@ -56,6 +57,7 @@
   },
   "devDependencies": {
     "@svgr/webpack": "^6.5.1",
+    "cross-env": "^10.1.0",
     "prisma": "^4.9.0",
     "sass": "^1.56.1"
   }

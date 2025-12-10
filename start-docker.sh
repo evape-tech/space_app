@@ -17,8 +17,14 @@ echo "Cleaning up dangling images (volumes will be preserved)..."
 docker images -f "dangling=true" -q | xargs -r docker rmi 2>/dev/null
 echo "Dangling images cleaned."
 
-echo "Building and starting containers..."
-docker-compose up -d --build
+echo "Loading environment variables from .env.production..."
+set -a
+source .env.production
+set +a
+
+echo "Building and starting containers (with no cache)..."
+docker-compose build --no-cache
+docker-compose up -d
 
 if [ $? -ne 0 ]; then
     echo "Failed to start containers."
