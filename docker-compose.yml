@@ -22,5 +22,4 @@ services:
 
 networks:
   csms-network:
-    name: csms-nextjs_csms-network
     external: true
