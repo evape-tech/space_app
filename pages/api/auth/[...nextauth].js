@@ -1,21 +1,98 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
-import LineProvider from "next-auth/providers/line";
-import CredentialsProvider from "next-auth/providers/credentials";
+import LineProvider from "next-auth/providers/line"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from '@/utils/db'
 import axios from 'axios'
 
+const BACKEND_API = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api'
 
-const baseApiUrl = process.env.NEXT_PUBLIC_BASE_API
+// 呼叫後端 API 進行第三方登入
+async function callBackendAuth(provider, data) {
+    try {
+        const res = await axios.post(`${BACKEND_API}/auth/thirdparty`, data, {
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            }
+        })
+        
+        if (res.status === 200 && res.data.success) {
+            return res.data
+        }
+        console.warn('Backend API returned non-success:', res.data)
+        return null
+    } catch (error) {
+        console.error(`Backend API call failed for ${provider}:`, error.message)
+        return null
+    }
+}
 
-// import AppleProvider from "next-auth/providers/apple"
-// import EmailProvider from "next-auth/providers/email"
+// 從資料庫查找用戶
+async function findUserInDB(token) {
+    // 優先使用 acc 查詢
+    if (token.acc) {
+        try {
+            const user = await prisma.user.findUnique({ where: { acc: token.acc } })
+            if (user) return user
+        } catch (e) { }
+    }
+    
+    // 使用 numeric userId 查詢（credentials login）
+    if (token.userId && typeof token.userId === 'number') {
+        try {
+            return await prisma.user.findUnique({ where: { id: token.userId } })
+        } catch (e) { }
+    }
+    
+    // 使用 uuid 查詢
+    if (token.uuid) {
+        try {
+            return await prisma.user.findUnique({ where: { uuid: token.uuid } })
+        } catch (e) { }
+    }
+    
+    return null
+}
 
-// For more information on each option (and a full list of options) go to
-// https://next-auth.js.org/configuration/options
+// 儲存或更新用戶到資料庫
+async function saveUserToDB(acc, provider, uuid, profileData) {
+    const existing = await prisma.user.findUnique({ where: { acc } })
+    
+    if (existing) {
+        // 更新 uuid（如果有變更）
+        if (uuid && existing.uuid !== uuid) {
+            await prisma.user.update({ 
+                where: { id: existing.id }, 
+                data: { uuid } 
+            })
+        }
+        return existing
+    }
+    
+    // 建立新用戶
+    const newUser = await prisma.user.create({
+        data: {
+            acc,
+            provider,
+            uuid: uuid || null
+        }
+    })
+    
+    // 建立 profile
+    if (profileData) {
+        await prisma.profile.create({
+            data: {
+                userId: newUser.id,
+                ...profileData
+            }
+        })
+    }
+    
+    return newUser
+}
+
 export const authOptions = {
-    // https://next-auth.js.org/configuration/providers/oauth
-
     trustHost: true,
     session: {
         strategy: 'jwt',
@@ -31,192 +108,155 @@ export const authOptions = {
             clientSecret: process.env.LINE_CLIENT_SECRET ?? ''
         }),
         CredentialsProvider({
-            // The name to display on the sign in form (e.g. "Sign in with...")
             name: "Credentials",
-            // `credentials` is used to generate a form on the sign in page.
-            // You can specify which fields should be submitted, by adding keys to the `credentials` object.
-            // e.g. domain, username, password, 2FA token, etc.
-            // You can pass any HTML attribute to the <input> tag through the object.
-            // credentials: {
-            //     phoneNo: { label: "Username", type: "text", placeholder: "jsmith" },
-            // },
-            async authorize(credentials, req) {
-                // 呼叫後端 thirdparty login API 取得 token
-                try {
-                    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-                    console.log('🔐 Authorize called with phone:', credentials.phoneNo);
-                    console.log('🌐 Backend URL:', backendUrl);
-                    
-                    const res = await axios.post(`${backendUrl}/auth/thirdparty`, {
-                        provider: 'phone',
-                        phone: credentials.phoneNo
-                    }, {
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'ngrok-skip-browser-warning': 'true'
-                        }
-                    });
-
-                    const data = res.data;
-                    console.log('📡 Backend response status:', res.status);
-                    console.log('📡 Backend response data:', JSON.stringify(data, null, 2));
-
-                    if (res.status !== 200 || !data.success) {
-                        console.log('❌ Thirdparty login failed:', data);
-                        return null;
-                    }
-
-                    // 回傳 user 並附帶 token（會傳給 jwt callback）
-                    return {
-                        id: data.user.id,
-                        // backend may not return uuid; use id as fallback so we always have a stable identifier
-                        uuid: data.user.uuid || data.user.id,
-                        acc: data.user.phone || data.user.id,
-                        phone: data.user.phone,
-                        email: data.user.email,
-                        name: data.user.firstName || data.user.phone,
-                        provider: data.user.provider || 'phone',
-                        accessToken: data.token,
-                        // 如果後端也回傳 refreshToken，可加上：
-                        // refreshToken: data.refreshToken
-                    };
-                } catch (error) {
-                    console.error('❌ Authorize error:', error.message);
-                    console.error('❌ Error stack:', error.stack);
-                    console.error('❌ Error cause:', error.cause);
-                    return null;
+            async authorize(credentials) {
+                const data = await callBackendAuth('phone', {
+                    provider: 'phone',
+                    phone: credentials.phoneNo
+                })
+                
+                if (!data) return null
+                
+                return {
+                    id: data.user.id,
+                    uuid: data.user.uuid || data.user.id,
+                    acc: data.user.phone || data.user.id,
+                    phone: data.user.phone,
+                    email: data.user.email,
+                    name: data.user.firstName || data.user.phone,
+                    provider: 'phone',
+                    accessToken: data.token
                 }
             }
         })
     ],
-    theme: {
-        colorScheme: "light",
-    },
     callbacks: {
         async jwt({ token, user, account }) {
-            // 初次登入時，user 會有值（來自 authorize 回傳的物件）
-            if (user) {
-                token.accessToken = user.accessToken;
-                token.refreshToken = user.refreshToken; // 如果有
-                token.userId = user.id;
-                token.uuid = user.uuid;
-                token.acc = user.acc;
-                token.provider = user.provider;
+            if (!user) return token
+            
+            // 從後端 API 獲取的資料（OAuth with backend）
+            if (user.backendUser) {
+                Object.assign(token, {
+                    accessToken: user.backendUser.accessToken,
+                    userId: user.backendUser.id,
+                    uuid: user.backendUser.uuid,
+                    acc: user.backendUser.acc,
+                    provider: user.backendUser.provider
+                })
             }
-
-            // 這裡可以加入 token 續期邏輯
-            // if (token.accessTokenExpires && Date.now() > token.accessTokenExpires) {
-            //   // 呼叫 refresh endpoint
-            // }
-
-            return token;
-        },
-        async signIn({ user, account, profile, email, credentials }) {
-
-            const body = {
-                acc: user.acc,
-                provider: user.provider || account.provider,
-                profile: {
-                    create: {
-                        nickName: user.name
-                    }
-                }
+            // Credentials provider（手機登入）
+            else if (user.accessToken) {
+                Object.assign(token, {
+                    accessToken: user.accessToken,
+                    refreshToken: user.refreshToken,
+                    userId: user.id,
+                    uuid: user.uuid,
+                    acc: user.acc,
+                    provider: user.provider
+                })
             }
-            console.log('signIn user/account:', user);
-            // ensure uuid from thirdparty is persisted
-            if (user.uuid) {
-                body.uuid = user.uuid;
-            }
-            if (account.provider === "credentials") {
-                body.profile.create.mobile = user.acc
-            }
-
-            if (account.provider === "google") {
-                body.acc = user.id
-                body.profile.create.email = user.email
-            }
-
-            if (account.provider === "line") {
-                body.acc = user.id
-            }
-
-            try {
-                // safer flow: check existing user first to avoid inserting explicit primary key
-                const existing = await prisma.user.findUnique({ where: { acc: body.acc } });
-                if (existing) {
-                    // update uuid if provided and different
-                    if (body.uuid && existing.uuid !== body.uuid) {
-                        await prisma.user.update({ where: { id: existing.id }, data: { uuid: body.uuid } });
-                    }
-                } else {
-                    // create new user first (only pass allowed fields, no id)
-                    const createData = {
-                        acc: body.acc,
-                        provider: body.provider,
-                        uuid: body.uuid ?? undefined,
-                    };
-                    const newUser = await prisma.user.create({ data: createData });
-
-                    // create profile separately if provided
-                    if (body.profile && body.profile.create) {
-                        await prisma.profile.create({
-                            data: {
-                                userId: newUser.id,
-                                mobile: body.profile.create.mobile ?? null,
-                                nickName: body.profile.create.nickName ?? null,
-                                email: body.profile.create.email ?? null,
-                            }
-                        });
-                    }
-                }
-            } catch (error) {
-                console.log('signIn upsert/create error:', error.message || error);
-                return false
-            }
-
-            return true
-        },
-        async session({ session, user, token }) {
-            // 把 accessToken 傳給前端
-            session.accessToken = token.accessToken;
-            session.refreshToken = token.refreshToken;
-
-            // 嘗試從資料庫取得使用者資料
-            let dbUser = await prisma.user.findUnique({
-                where: {
-                    acc: token.acc || token.sub
-                }
-            })
-            if (!dbUser) {
-                dbUser = await prisma.user.findUnique({
-                    where: {
-                        id: token.userId || +token.sub,
-                    }
+            // OAuth fallback（沒有後端資料）
+            else {
+                Object.assign(token, {
+                    userId: user.id,
+                    acc: user.email || user.id,
+                    provider: account?.provider
                 })
             }
             
+            return token
+        },
+        
+        async signIn({ user, account }) {
+            // Google/Line OAuth：呼叫後端 API
+            if (account.provider === "google" || account.provider === "line") {
+                const data = await callBackendAuth(account.provider, {
+                    provider: account.provider,
+                    email: user.email,
+                    name: user.name,
+                    providerId: user.id,
+                    image: user.image
+                })
+                
+                if (data) {
+                    user.backendUser = {
+                        id: data.user.id,
+                        uuid: data.user.uuid || data.user.id,
+                        acc: data.user.email || data.user.id,
+                        provider: account.provider,
+                        accessToken: data.token
+                    }
+                }
+            }
+            
+            // 準備儲存到本地資料庫的資料
+            let acc, uuid, profileData = {}
+            
+            if (user.backendUser) {
+                // 從後端 API 獲取的資料
+                acc = user.backendUser.acc
+                uuid = user.backendUser.uuid
+            } else if (account.provider === "credentials") {
+                // 手機登入
+                acc = user.acc
+                uuid = user.uuid
+                profileData.mobile = user.acc
+                profileData.nickName = user.name
+            } else if (account.provider === "google") {
+                // Google OAuth fallback
+                acc = user.id
+                uuid = null
+                profileData.email = user.email
+                profileData.nickName = user.name
+            } else if (account.provider === "line") {
+                // Line OAuth fallback
+                acc = user.id
+                uuid = null
+                profileData.nickName = user.name
+            }
+            
+            try {
+                await saveUserToDB(
+                    acc, 
+                    account.provider, 
+                    uuid,
+                    Object.keys(profileData).length > 0 ? profileData : null
+                )
+                return true
+            } catch (error) {
+                console.error('Failed to save user to DB:', error.message)
+                return false
+            }
+        },
+        
+        async session({ session, token }) {
+            // 設定 token 到 session
+            session.accessToken = token.accessToken
+            session.refreshToken = token.refreshToken
+            
+            // 從資料庫取得用戶資料
+            const dbUser = await findUserInDB(token)
+            
             if (dbUser) {
-                session.user = dbUser;
-                // if token includes uuid (from thirdparty login), ensure it's available on session.user
-                if (!session.user.uuid && token.uuid) session.user.uuid = token.uuid;
-            } else {
-                // 如果資料庫沒有，至少回傳 token 中的基本資訊
                 session.user = {
-                    id: token.userId,
-                    uuid: token.uuid,
+                    ...dbUser,
+                    uuid: dbUser.uuid || token.uuid
+                }
+            } else {
+                session.user = {
                     acc: token.acc,
+                    uuid: token.uuid,
                     provider: token.provider
-                };
+                }
             }
             
             return session
-        },
+        }
     },
-    secret: process.env.NEXTAUTH_SECRET,
     pages: {
         signIn: '/auth/login',
     },
-    // secret: "test",
+    secret: process.env.NEXTAUTH_SECRET,
     jwt: {
         secret: process.env.NEXTAUTH_SECRET
     },
