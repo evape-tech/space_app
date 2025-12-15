@@ -186,6 +186,8 @@ export const authOptions = {
                         provider: account.provider,
                         accessToken: data.token
                     }
+                } else {
+                    console.log(`Backend API unavailable, using fallback for ${account.provider} auth`)
                 }
             }
             
