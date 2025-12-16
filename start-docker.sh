@@ -40,7 +40,7 @@ if [ $? -eq 0 ]; then
     echo "=========================================="
     echo "      Services are running!"
     echo "=========================================="
-    echo "🌐 Web App: http://localhost:3010"
+    echo "🌐 Web App: http://localhost:6000"
     echo ""
     echo "📋 Services:"
     echo "- space_app (Next.js Application)"

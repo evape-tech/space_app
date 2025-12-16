@@ -83,9 +83,9 @@ RUN npx prisma generate
 
 USER nextjs
 
-EXPOSE 3010
+EXPOSE 6000
 
-ENV PORT 3010
+ENV PORT 6000
 ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]

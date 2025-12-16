@@ -24,7 +24,7 @@ const TappayPayment = () => {
       window.TPDirect.setupSDK(
         parseInt(process.env.NEXT_PUBLIC_TAPPAY_APP_ID),
         process.env.NEXT_PUBLIC_TAPPAY_APP_KEY,
-        process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE || 'sandbox'
+        process.env.NEXT_PUBLIC_TAPPAY_SERVER_TYPE
       );
       console.log('✅ TapPay SDK 初始化完成');
 
