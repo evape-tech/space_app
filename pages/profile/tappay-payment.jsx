@@ -122,7 +122,7 @@ const TappayPayment = () => {
           amount: parseInt(amount),
           description: details || '充電站充值',
           transactionId: orderId,
-          paymentMethod: 'credit_card',
+          paymentMethod: 'tappay_credit',
           metadata: {
             prime: prime,
             name: cardholderName,
