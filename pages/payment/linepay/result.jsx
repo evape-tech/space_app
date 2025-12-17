@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
@@ -9,11 +8,10 @@ import styles from "@/styles/verify-code.module.scss";
 /**
  * LINE Pay return page
  * Expects query params from LINE Pay redirect: transactionId, orderId, returnCode, returnMessage, amount
- * Will POST to backend confirm endpoint to finalize the payment if transactionId exists.
+ * Backend should finalize payment on callback and redirect to this page with status/message.
  */
 const LinePayResult = () => {
 	const router = useRouter();
-	const { data: session } = useSession();
 	const { transactionId, orderId, returnCode, returnMessage, amount } = router.query;
 
 	const [isVerifying, setIsVerifying] = useState(true);
@@ -24,62 +22,36 @@ const LinePayResult = () => {
 	useEffect(() => {
 		if (!router.isReady) return;
 
-		console.log("LINE Pay redirect params:", { transactionId, orderId, returnCode, returnMessage, amount });
+		const q = router.query;
+		console.log("LINE Pay redirect params:", q);
 
-		// If there is a transactionId, try to confirm payment on backend.
-		if (transactionId) {
-			confirmPayment();
+		// server-provided status (preferred)
+		if (typeof q.status !== "undefined") {
+			const status = String(q.status).toLowerCase();
+			console.log("Detected status redirect:", { status, message: q.message });
+
+			const okValues = ["success", "ok", "completed", "true", "1"];
+			if (okValues.includes(status)) {
+				setPaymentSuccess(true);
+			} else {
+				setPaymentSuccess(false);
+				setErrorMessage(q.message || q.returnMessage || `付款失敗（狀態: ${status}）`);
+			}
+
+			setIsVerifying(false);
 			return;
 		}
 
-		// Otherwise use returnCode to determine result
-		if (returnCode === "0000" || returnCode === "0") {
+		// fallback: LINE Pay legacy returnCode
+		if (q.returnCode === "0000" || q.returnCode === "0") {
 			setPaymentSuccess(true);
 		} else {
 			setPaymentSuccess(false);
-			setErrorMessage(returnMessage || `付款失敗（回傳代碼: ${returnCode || "unknown"}）`);
+			setErrorMessage(q.returnMessage || `付款失敗（回傳代碼: ${q.returnCode || "unknown"}）`);
 		}
 
 		setIsVerifying(false);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [router.isReady, transactionId, returnCode]);
-
-	const confirmPayment = async () => {
-		setIsVerifying(true);
-		try {
-			const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_API || ""}/payment/linepay/confirm`;
-
-			const headers = { "Content-Type": "application/json" };
-			if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
-
-			const resp = await fetch(backendUrl, {
-				method: "POST",
-				headers,
-				body: JSON.stringify({ transactionId, orderId, amount: amount ? parseInt(amount, 10) : undefined })
-			});
-
-			const data = await resp.json().catch(() => ({}));
-			console.log("LINE Pay confirm response:", resp.status, data);
-
-			if (resp.ok && data.success) {
-				setPaymentSuccess(true);
-			} else {
-				// If backend doesn't provide structured response, try to interpret LINE Pay returnCode
-				if (data && (data.returnCode === "0000" || data.returnCode === "0")) {
-					setPaymentSuccess(true);
-				} else {
-					setPaymentSuccess(false);
-					setErrorMessage(data.message || data.returnMessage || returnMessage || "付款確認失敗");
-				}
-			}
-		} catch (err) {
-			console.error("Confirm request failed:", err);
-			setPaymentSuccess(false);
-			setErrorMessage("付款確認過程發生錯誤");
-		} finally {
-			setIsVerifying(false);
-		}
-	};
+	}, [router.isReady, router.query]);
 
 	useEffect(() => {
 		if (!paymentSuccess || isVerifying) return;
