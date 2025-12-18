@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import fetchWithAuth from '@/utils/fetchWithAuth'
 
 /**
  * @deprecated
@@ -24,14 +25,10 @@ export function getCarsBrandsListFromBackend() {
 
 export function getUserCarsFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me/vehicles`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/vehicles`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
@@ -59,14 +56,11 @@ export function createCar(data, userId) {
 export function createCarForBackend(data, token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
     
-    return request({
-        url: `${baseUrl}/users/me/vehicles`,
-        method: 'post',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        },
-        data
+    return fetchWithAuth(`${baseUrl}/users/me/vehicles`, {
+        method: 'POST',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        body: data,
+        token
     })
 }
 
@@ -90,13 +84,9 @@ export function deleteCar(id) {
 
 export function deleteCarForBackend(id, token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me/vehicles/${id}`,
-        method: 'delete',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/vehicles/${id}`, {
+        method: 'DELETE',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }

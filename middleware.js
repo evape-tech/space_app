@@ -15,24 +15,18 @@ export async function middleware(req) {
 
   const checkList = () => {
     const whileList = ["/api/send-sms", "/api/auth"];
-
-    var result = whileList.findIndex((w) => {
-      return url.startsWith(w);
-    });
-    console.log(result);
+    const result = whileList.findIndex((w) => url.startsWith(w));
+    // return index (>=0) if matched, otherwise -1
+    // keep a log for debugging
+    console.log('middleware whitelist check:', { url, result });
+    return result;
   };
 
   if (!verifiedToken) {
     // if this an API request, respond with JSON
     if (url.startsWith("/api/") && checkList() < 0) {
-      // return NextResponse.json(
-      //   { error: { message: "authentication required" } },
-      //   { status: 401 }
-      // );
-      req.nextUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
-      req.nextUrl.pathname = "/auth/login";
-
-      return NextResponse.redirect(req.nextUrl);
+      // For API requests, return 401 JSON so clients (fetch/axios) can handle redirects
+      return NextResponse.json({ error: { message: "authentication required" } }, { status: 401 });
     }
     // otherwise, redirect to the set token page
     else {

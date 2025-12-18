@@ -165,14 +165,16 @@ const Login = ({ providers }) => {
         onChange={(event) => setAccepted(event.currentTarget.checked)}
       />
       
-      {/* Debug: Display backend API URL */}
-      <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-100 rounded">
-        <div><strong>Backend API:</strong></div>
-        <div className="break-all">{process.env.NEXT_PUBLIC_BACKEND_API || 'Not Set'}</div>
-        <div className="mt-2"><strong>Base API:</strong></div>
-        <div className="break-all">{process.env.NEXT_PUBLIC_BASE_API || 'Not Set'}</div>
-        <div className="mt-2"><strong>NODE_ENV:</strong> {process.env.NODE_ENV || 'Not Set'}</div>
-      </div>
+      {/* Debug: Display backend API URL (only in development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-100 rounded">
+          <div><strong>Backend API:</strong></div>
+          <div className="break-all">{process.env.NEXT_PUBLIC_BACKEND_API || 'Not Set'}</div>
+          <div className="mt-2"><strong>Base API:</strong></div>
+          <div className="break-all">{process.env.NEXT_PUBLIC_BASE_API || 'Not Set'}</div>
+          <div className="mt-2"><strong>NODE_ENV:</strong> {process.env.NODE_ENV || 'Not Set'}</div>
+        </div>
+      )}
     </div>
   );
 };
