@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import fetchWithAuth from '@/utils/fetchWithAuth'
 
 /**
  * @deprecated
@@ -30,46 +31,31 @@ export function checkOutPage(data) {
 
 export function getRechargesFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me/topups`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/topups`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
 export function getUserWalletBalanceFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me/wallet`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/wallet`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
 export function createPaymentOrderFromBackend(token, orderData) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return fetch(`${baseUrl}/users/me/payment/create-order`, {
+
+    return fetchWithAuth(`${baseUrl}/users/me/payment/create-order`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
             'ngrok-skip-browser-warning': 'true'
         },
-        body: JSON.stringify(orderData)
-    }).then(async response => {
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || data.error || 'API 請求失敗');
-        }
-        return data;
+        body: orderData,
+        token
     });
 }

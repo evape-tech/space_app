@@ -24,8 +24,9 @@ const handleUnauthorized = async () => {
         } catch (error) {
             console.error('Error signing out:', error)
         } finally {
-            // Redirect to login page
-            window.location.href = '/auth/login'
+            // Redirect to login page and preserve current path as callbackUrl
+            const callback = encodeURIComponent(window.location.pathname + window.location.search)
+            window.location.href = `/auth/login?callbackUrl=${callback}`
         }
     }
 }

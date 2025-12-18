@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import fetchWithAuth from '@/utils/fetchWithAuth'
 
 // export function createUser(data) {
 //     return request({
@@ -56,71 +57,47 @@ export function getChargeTx(userId) {
 
 export function getChargeTxFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me/transactions`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/transactions`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
 export function getChargeTxLastestFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-
-    return request({
-        url: `${baseUrl}/users/me/transactions?mode=latest`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/transactions?mode=latest`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
 export function getChargeTariffsFromBackend(token, transactionId) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-
-    return request({
-        url: `${baseUrl}/users/me/wallet/transactions`,
-        method: 'post',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-        },
-        data: {
-            transaction_id: transactionId
-        }
+    return fetchWithAuth(`${baseUrl}/users/me/wallet/transactions`, {
+        method: 'POST',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        body: { transaction_id: transactionId },
+        token
     })
 }
 
 export function getUserProfileFromBackend(token) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-    
-    return request({
-        url: `${baseUrl}/users/me`,
-        method: 'get',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-        }
+    return fetchWithAuth(`${baseUrl}/users/me`, {
+        method: 'GET',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        token
     })
 }
 
 export function updateUserProfileFromBackend(token, data) {
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api';
-
-    return request({
-        url: `${baseUrl}/users/me`,
-        method: 'patch',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-        },
-        data
+    return fetchWithAuth(`${baseUrl}/users/me`, {
+        method: 'PATCH',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        body: data,
+        token
     })
 }

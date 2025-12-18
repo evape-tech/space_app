@@ -25,11 +25,22 @@ const Recharge = () => {
   const [loading, setLoading] = useState(false);
 
   // 支付方式選項 - TapPay 支援的通道
-  const paymentMethods = [
-    {id: "tappay_credit", name: "信用卡", icon: "/images/ic_credit_card.png", description: "Visa / Master / JCB", isImage: true},
-    {id: "tappay_line", name: "LINE Pay", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款", isImage: true},
-    {id: "tappay_easywallet", name: "悠游付", icon: "/images/ic_easy_wallet.png", description: "悠遊卡 Easy Wallet", isImage: true},
-  ];
+    // 支付方式選項 - 可透過環境變數 NEXT_PUBLIC_PAYMENT_PROVIDER 切換顯示
+    // 可選值: 'tappay' / 'linepay' / 'both'（預設 both）
+    const PAYMENT_PROVIDER = (process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || 'linepay').toLowerCase();
+
+    const paymentMethods = [
+      {id: "tappay_credit", name: "信用卡", icon: "/images/ic_credit_card.png", description: "Visa / Master / JCB", isImage: true, provider: 'tappay'},
+      {id: "tappay_linepay", name: "LINE Pay", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款", isImage: true, provider: 'tappay'},
+      {id: "direct_linepay", name: "LINE Pay (直連)", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款（直連）", isImage: true, provider: 'linepay'},
+      {id: "tappay_easywallet", name: "悠遊付", icon: "/images/ic_easy_wallet.png", description: "悠遊卡 Easy Wallet", isImage: true, provider: 'tappay'},
+    ];
+
+    // 根據環境變數過濾顯示的支付方式
+    const visiblePaymentMethods = paymentMethods.filter(m => {
+      if (PAYMENT_PROVIDER === 'both') return true;
+      return m.provider === PAYMENT_PROVIDER;
+    });
 
   const validInput = (v) => {
     if (v >= 1) setInputValid(true);
@@ -109,10 +120,10 @@ const Recharge = () => {
 
     // 根據選擇的支付方式分支處理
     switch (selectedPayment) {
-      case "tappay_line": {
+      case "tappay_linepay": {
         console.log('Entering LINE Pay case');
         // LINE Pay - 導向 TapPay 支付頁面
-        const paymentMethod = 'line_pay';
+        const paymentMethod = 'tappay_linepay';
 
         console.log(`🔄 ${paymentMethod} 支付流程開始，金額:`, orderData.amount);
 
@@ -168,10 +179,52 @@ const Recharge = () => {
         return;
       }
 
+      case "direct_linepay": {
+        console.log('Entering LINE Pay direct case');
+        const paymentMethod = 'direct_linepay';
+
+        console.log(`🔄 ${paymentMethod} 支付流程開始，金額:`, orderData.amount);
+
+        try {
+          const paymentData = {
+            amount: parseInt(orderData.amount),
+            description: '充電站充值',
+            transactionId: orderTxNo,
+            paymentMethod: paymentMethod
+          };
+
+          const data = await createPaymentOrderFromBackend(session?.accessToken, paymentData);
+          console.log('後端回應 (LINE direct):', data);
+
+          // 支援不同命名的 payment url
+          const paymentUrl = data?.payment_url || data?.paymentUrl || data?.redirect_url;
+          if (paymentUrl) {
+            console.log('🔗 跳轉到 LINE Pay 支付頁面:', paymentUrl);
+            window.location.href = paymentUrl;
+            return; // 已跳轉，結束
+          }
+
+          if (data.success) {
+            alert('付款成功！');
+            router.push('/');
+            return;
+          }
+
+          alert('付款失敗: ' + (data.message || '未知錯誤'));
+          setLoading(false);
+        } catch (error) {
+          console.error('LINE Pay direct error:', error);
+          alert('付款過程發生錯誤: ' + (error.message || error));
+          setLoading(false);
+        }
+
+        return;
+      }
+
       case "tappay_easywallet": {
         console.log('Entering EasyWallet case');
         // 悠遊付 - 導向 TapPay 支付頁面
-        const paymentMethod = 'easy_wallet';
+        const paymentMethod = 'tappay_easywallet';
 
         console.log(`🔄 ${paymentMethod} 支付流程開始，金額:`, orderData.amount);
 
@@ -353,7 +406,7 @@ const Recharge = () => {
         <div className="w-full">
           <label className="block text-sm font-medium mb-2">選擇支付方式</label>
           <div className="flex flex-col gap-3">
-            {paymentMethods.map((method) => (
+            {visiblePaymentMethods.map((method) => (
                 <div
                     key={method.id}
                     className={`
@@ -406,7 +459,7 @@ const Recharge = () => {
             onClick={handleRecharge}
             disabled={!inputValid || loading || !selectedPayment}
         >
-          {loading ? (selectedPayment === "tappay_line" ? '取得付款資訊中...' : '處理中...') : `前往付款 NT$ ${points}`}
+          {loading ? ((selectedPayment === "tappay_linepay" || selectedPayment === "direct_linepay") ? '取得付款資訊中...' : '處理中...') : `前往付款 NT$ ${points}`}
         </button>
       </div>
   );
