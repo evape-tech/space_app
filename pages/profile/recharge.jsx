@@ -32,7 +32,7 @@ const Recharge = () => {
     const paymentMethods = [
       {id: "tappay_credit", name: "信用卡", icon: "/images/ic_credit_card.png", description: "Visa / Master / JCB", isImage: true, provider: 'tappay'},
       {id: "tappay_linepay", name: "LINE Pay", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款", isImage: true, provider: 'tappay'},
-      {id: "direct_linepay", name: "LINE Pay (直連)", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款（直連）", isImage: true, provider: 'linepay'},
+      {id: "direct_linepay", name: "LINE Pay", icon: "/images/ic_line_pay.png", description: "LINE Pay 付款", isImage: true, provider: 'linepay'},
       {id: "tappay_easywallet", name: "悠遊付", icon: "/images/ic_easy_wallet.png", description: "悠遊卡 Easy Wallet", isImage: true, provider: 'tappay'},
     ];
 
