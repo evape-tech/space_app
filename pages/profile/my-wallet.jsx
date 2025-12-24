@@ -3,6 +3,7 @@ import styles from "@/styles/verify-code.module.scss";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/router";
+import { setUserStatus } from '@/utils/storeTool'
 import { getLastRecharge, getUserWalletBalanceFromBackend } from "@/client-api/recharge";
 import { useSession } from "next-auth/react";
 import { Modal } from '@mantine/core';
@@ -42,7 +43,8 @@ const MyWallet = () => {
   };
 
   const navTo = (path) => {
-    router.push(path);
+    const target = path.startsWith('/') ? path : `/profile/${path}`;
+    router.push(target).then(() => setUserStatus({ userId, cpid: null, appPath: target }));
   };
 
   const handleStartRecharge = () => {
@@ -92,7 +94,7 @@ const MyWallet = () => {
               className="px-6 py-2 bg-blue-500 text-white rounded-full"
               onClick={() => {
                 setShowProfileWarning(false);
-                router.push('/profile');
+                navTo('/profile');
               }}
             >
               前往填寫

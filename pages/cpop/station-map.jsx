@@ -69,11 +69,13 @@ const StationMap = () => {
       setShowProfileWarning(true);
       return;
     }
-    router.push(path);
+    // navigate first, then persist appPath so Layout won't redirect us away
+    router.push(path).then(() => setUserStatus({ userId, cpid: null, appPath: path }));
   };
 
   const navTo = (path) => {
-    router.push(path);
+    // navigate first, then persist desired appPath to avoid Layout auto-redirecting back
+    router.push(path).then(() => setUserStatus({ userId, cpid: null, appPath: path }));
   };
 
   const checkWallet = () => {
@@ -180,7 +182,7 @@ const StationMap = () => {
                 className="px-6 py-2 bg-blue-500 text-white rounded-full"
                 onClick={() => {
                   setShowProfileWarning(false);
-                  router.push('/profile');
+                  navTo('/profile');
                 }}
               >
                 前往填寫
