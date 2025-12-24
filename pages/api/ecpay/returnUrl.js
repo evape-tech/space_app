@@ -1,5 +1,6 @@
 import nc from "next-connect";
 import { prisma } from "@/utils/db";
+import dayjs from '@/utils/dayjs'
 // import User from "../../../models/User";
 // import db from "../../../utils/db";
 // import auth from "../../../middleware/auth";
@@ -34,7 +35,8 @@ handler.post(async (req, res, next) => {
     const payData = {
       orderNo: body.MerchantTradeNo,
       txId: body.TradeNo,
-      txTime: new Date(body.TradeDate),
+      // parse provider time string using configured APP_TIMEZONE, store as Date (UTC)
+      txTime: dayjs.tz(body.TradeDate, process.env.APP_TIMEZONE || 'UTC').toDate(),
       paymentName: "ecpay",
       amount: +body.TradeAmt,
       payway: "credit",

@@ -1,5 +1,7 @@
 import axios from 'axios';
-import prisma from '@/utils/db';
+import nc from "next-connect";
+import { prisma } from "@/utils/db";
+import dayjs from '@/utils/dayjs'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -75,7 +77,7 @@ export default async function handler(req, res) {
           where: { orderNo: orderId },
           data: {
             status: 'paid',
-            updatedAt: new Date()
+            updatedAt: dayjs.utc().toDate()
           }
         });
 
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
           where: { orderNo: orderId },
           data: {
             status: 'failed',
-            updatedAt: new Date()
+            updatedAt: dayjs.utc().toDate()
           }
         });
       } catch (dbError) {

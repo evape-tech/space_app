@@ -1,5 +1,6 @@
 import nc from "next-connect";
 import { prisma } from '@/utils/db'
+import dayjs from '@/utils/dayjs'
 // import User from "../../../models/User";
 // import db from "../../../utils/db";
 // import auth from "../../../middleware/auth";
@@ -15,7 +16,8 @@ handler.post(async (req, res, next) => {
   //     "kW": .5,
   //     "fee": 100
   // }
-  body.startTime = new Date(); // only startup
+  // use UTC as canonical stored startTime
+  body.startTime = dayjs.utc().toDate(); // only startup
   // Generate auto roundId if not provided (using timestamp + random)
   if (!body.roundId) {
     body.roundId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

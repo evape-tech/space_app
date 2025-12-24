@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import dayjs from "dayjs";
+import dayjs from "@/utils/dayjs";
 import { useRouter } from "next/router";
 import { Select, TextInput } from "@mantine/core";
 import { useForm, isNotEmpty, isEmail } from "@mantine/form";
@@ -17,7 +17,8 @@ const ProfileEdit = () => {
   const userId = session?.user?.id;
 
   const [formValues, setFormValues] = useState({});
-  const [bDay, setbDay] = useState(dayjs().year(dayjs().$y - 20));
+  // use UTC baseline for consistent calculations
+  const [bDay, setbDay] = useState(dayjs.utc().year(dayjs.utc().$y - 20));
 
   const form = useForm({
     initialValues: {
@@ -51,8 +52,8 @@ const ProfileEdit = () => {
   }
 
   const years = () => {
-    const a = dayjs().$y - 120;
-    const b = dayjs().$y;
+    const a = dayjs.utc().$y - 120;
+    const b = dayjs.utc().$y;
     return range(a, b);
   };
 
@@ -112,9 +113,9 @@ const ProfileEdit = () => {
         email: profile.email || "",
         fullName: profile.firstName && profile.lastName ? `${profile.firstName}${profile.lastName}` : "",
         phone: profile.phone || "",
-        birthY: profile.dateOfBirth ? dayjs(profile.dateOfBirth).$y : dayjs().$y,
-        birthM: profile.dateOfBirth ? dayjs(profile.dateOfBirth).$M + 1 : dayjs().$M + 1,
-        birthD: profile.dateOfBirth ? dayjs(profile.dateOfBirth).$D : dayjs().$D,
+        birthY: profile.dateOfBirth ? dayjs.utc(profile.dateOfBirth).$y : dayjs.utc().$y,
+        birthM: profile.dateOfBirth ? dayjs.utc(profile.dateOfBirth).$M + 1 : dayjs.utc().$M + 1,
+        birthD: profile.dateOfBirth ? dayjs.utc(profile.dateOfBirth).$D : dayjs.utc().$D,
       });
     } catch (error) {
       console.error('取得使用者資料失敗:', error.message);

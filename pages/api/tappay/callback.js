@@ -1,4 +1,5 @@
 import prisma from '@/utils/db';
+import dayjs from '@/utils/dayjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
         where: { orderNo: order_number },
         data: {
           status: 'paid',
-          updatedAt: new Date()
+          updatedAt: dayjs.utc().toDate(),
         }
       });
 
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
         where: { orderNo: order_number },
         data: {
           status: 'failed',
-          updatedAt: new Date()
+          updatedAt: dayjs.utc().toDate(),
         }
       });
 

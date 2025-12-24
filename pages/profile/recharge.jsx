@@ -5,7 +5,7 @@ import {useRouter} from "next/router";
 import {useState} from "react";
 import clsx from "clsx";
 import {useSession} from "next-auth/react";
-import dayjs from "dayjs";
+import dayjs from "@/utils/dayjs";
 import { createPaymentOrderFromBackend } from '@/client-api/recharge';
 import Image from "next/image";
 
@@ -55,7 +55,8 @@ const Recharge = () => {
 
   const genOrderTxNo = () => {
     // 直接產生訂單號，不呼叫 API/DB
-    const dayFormat = dayjs().format("YYMMDD");
+    // use UTC for generated order/day identifiers to stay consistent when persisted
+    const dayFormat = dayjs.utc().format("YYMMDD");
     // 取 3 位隨機數字（可改用 userId/時間戳/uuid）
     const random = Math.floor(100 + Math.random() * 900); // 100~999
     return `Z${dayFormat}${random}`;

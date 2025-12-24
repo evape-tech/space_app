@@ -1,7 +1,7 @@
 import styles from "@/styles/verify-code.module.scss";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
-import dayjs from "dayjs";
+import dayjs from "@/utils/dayjs";
 
 // import DirectionIcon from "@/image/icons/direction.svg";
 // import ListCpIcon from "@/image/icons/list-cp.svg";
@@ -29,13 +29,13 @@ const ChargeItem = ({ charge }) => {
   const cpid = charge.cpid;
   const transactionId = charge.transaction_id;
 
-  const mins = dayjs(endTime).diff(dayjs(startTime), "minutes");
+  const mins = dayjs.utc(endTime).diff(dayjs.utc(startTime), "minutes");
   
   return (
     <div className="flex  p-[15px] border-b-2 justify-between items-center w-full bg-white">
       <div className="text-[#828282] text-[15px]">
-        <div>{dayjs(startTime).format("YYYY/MM/DD")}</div>
-        <div>{dayjs(startTime).format("HH:mm:ss")}</div>
+        <div>{dayjs.utc(startTime).local().format("YYYY/MM/DD")}</div>
+        <div>{dayjs.utc(startTime).local().format("HH:mm:ss")}</div>
         {cpid && <div className="text-[12px] mt-1">充電樁: {cpid}</div>}
       </div>
       <div className="text-right">

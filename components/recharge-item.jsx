@@ -1,7 +1,7 @@
 import styles from "@/styles/verify-code.module.scss";
 import Layout from "@/components/layout";
 import Navbar from "@/components/navbar";
-import dayjs from "dayjs";
+import dayjs from "@/utils/dayjs";
 
 // import DirectionIcon from "@/image/icons/direction.svg";
 // import ListCpIcon from "@/image/icons/list-cp.svg";
@@ -57,8 +57,8 @@ const RechargeItem = ({ recharge }) => {
   return (
     <div className="flex p-[15px] border-b-2 justify-between items-center w-full bg-white">
       <div className="text-[#828282] text-[15px]">
-        <div>{dayjs(createdAt).format("YYYY/MM/DD")}</div>
-        <div>{dayjs(createdAt).format("HH:mm:ss")}</div>
+        <div>{dayjs.utc(createdAt).local().format("YYYY/MM/DD")}</div>
+        <div>{dayjs.utc(createdAt).local().format("HH:mm:ss")}</div>
         {paymentMethod && (
           <div className="text-[12px] mt-1 text-[#BDBDBD]">
             {getPaymentMethodText(paymentMethod)}

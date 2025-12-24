@@ -7,7 +7,7 @@ import { genHtml } from '@/utils/paymentHtml'
 // import db from "../../../utils/db";
 // import auth from "../../../middleware/auth";
 const handler = nc() //.use(auth);
-import dayjs from 'dayjs'
+import dayjs from '@/utils/dayjs'
 handler.post(async (req, res, next) => {
 
     const { body } = req
@@ -16,7 +16,7 @@ handler.post(async (req, res, next) => {
     // const translator = short(); // Defaults to flickrBase58
     // const orderNo = translator.generate().slice(2); // An alias for new.
     // console.log(orderNo)
-    const txDT = dayjs().format('YYYY/MM/DD HH:mm:ss')
+    const txDT = dayjs.tz(dayjs(), process.env.APP_TIMEZONE || 'UTC').format('YYYY/MM/DD HH:mm:ss')
 
     const param = {
         MerchantTradeNo: orderTxNo, //請帶20碼uid, ex: f0a0d7e9fae1bb72bc93

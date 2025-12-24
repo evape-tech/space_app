@@ -8,7 +8,7 @@ import { getUserStatus } from '@/utils/storeTool'
 import { payPointFee, getChargeTxLastestFromBackend, getChargeTariffsFromBackend } from "@/client-api/user";
 import { useSession } from "next-auth/react";
 import { getLastRecharge } from "@/client-api/recharge";
-import dayjs from "dayjs";
+import dayjs from "@/utils/dayjs";
 import { updateUserStatus } from "@/utils/storeTool";
 import request from "@/utils/request";
 
@@ -162,9 +162,9 @@ const CpopEndup = () => {
 
             <div className="flex justify-between">
               <span>充電時間</span>{" "}
-              <span>{endupData?.startTime && endupData?.endTime ? `${dayjs(endupData?.startTime).format(
+              <span>{endupData?.startTime && endupData?.endTime ? `${dayjs.utc(endupData?.startTime).local().format(
                 "YYYY/MM/DD HH:mm"
-              )}~${dayjs(endupData?.endTime).format("HH:mm")}` : '-'}</span>
+              )}~${dayjs.utc(endupData?.endTime).local().format("HH:mm")}` : '-'}</span>
             </div>
             <div className="flex justify-between">
               <span>充電站</span> <span>{endupData?.station?.name || '-'}</span>
