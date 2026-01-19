@@ -2,7 +2,6 @@ import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import LineProvider from "next-auth/providers/line"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from '@/utils/db'
 import axios from 'axios'
 
 const BACKEND_API = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:3000/api'
@@ -26,70 +25,6 @@ async function callBackendAuth(provider, data) {
         console.error(`Backend API call failed for ${provider}:`, error.message)
         return null
     }
-}
-
-// 從資料庫查找用戶
-async function findUserInDB(token) {
-    // 優先使用 acc 查詢
-    if (token.acc) {
-        try {
-            const user = await prisma.user.findUnique({ where: { acc: token.acc } })
-            if (user) return user
-        } catch (e) { }
-    }
-    
-    // 使用 numeric userId 查詢（credentials login）
-    if (token.userId && typeof token.userId === 'number') {
-        try {
-            return await prisma.user.findUnique({ where: { id: token.userId } })
-        } catch (e) { }
-    }
-    
-    // 使用 uuid 查詢
-    if (token.uuid) {
-        try {
-            return await prisma.user.findUnique({ where: { uuid: token.uuid } })
-        } catch (e) { }
-    }
-    
-    return null
-}
-
-// 儲存或更新用戶到資料庫
-async function saveUserToDB(acc, provider, uuid, profileData) {
-    const existing = await prisma.user.findUnique({ where: { acc } })
-    
-    if (existing) {
-        // 更新 uuid（如果有變更）
-        if (uuid && existing.uuid !== uuid) {
-            await prisma.user.update({ 
-                where: { id: existing.id }, 
-                data: { uuid } 
-            })
-        }
-        return existing
-    }
-    
-    // 建立新用戶
-    const newUser = await prisma.user.create({
-        data: {
-            acc,
-            provider,
-            uuid: uuid || null
-        }
-    })
-    
-    // 建立 profile
-    if (profileData) {
-        await prisma.profile.create({
-            data: {
-                userId: newUser.id,
-                ...profileData
-            }
-        })
-    }
-    
-    return newUser
 }
 
 export const authOptions = {
@@ -144,7 +79,7 @@ export const authOptions = {
                     provider: user.backendUser.provider
                 })
             }
-            // Credentials provider（手機登入）
+            // Credentials provider（手機登入）- 也需要後端 API 資料
             else if (user.accessToken) {
                 Object.assign(token, {
                     accessToken: user.accessToken,
@@ -153,14 +88,6 @@ export const authOptions = {
                     uuid: user.uuid,
                     acc: user.acc,
                     provider: user.provider
-                })
-            }
-            // OAuth fallback（沒有後端資料）
-            else {
-                Object.assign(token, {
-                    userId: user.id,
-                    acc: user.email || user.id,
-                    provider: account?.provider
                 })
             }
             
@@ -178,57 +105,31 @@ export const authOptions = {
                     image: user.image
                 })
                 
-                if (data) {
-                    user.backendUser = {
-                        id: data.user.id,
-                        uuid: data.user.uuid || data.user.id,
-                        acc: data.user.email || data.user.id,
-                        provider: account.provider,
-                        accessToken: data.token
-                    }
-                } else {
-                    console.log(`Backend API unavailable, using fallback for ${account.provider} auth`)
+                if (!data) {
+                    console.error(`Backend API failed for ${account.provider} auth`)
+                    return false
+                }
+                
+                user.backendUser = {
+                    id: data.user.id,
+                    uuid: data.user.uuid || data.user.id,
+                    acc: data.user.email || data.user.id,
+                    provider: account.provider,
+                    accessToken: data.token
                 }
             }
             
-            // 準備儲存到本地資料庫的資料
-            let acc, uuid, profileData = {}
-            
-            if (user.backendUser) {
-                // 從後端 API 獲取的資料
-                acc = user.backendUser.acc
-                uuid = user.backendUser.uuid
-            } else if (account.provider === "credentials") {
-                // 手機登入
-                acc = user.acc
-                uuid = user.uuid
-                profileData.mobile = user.acc
-                profileData.nickName = user.name
-            } else if (account.provider === "google") {
-                // Google OAuth fallback
-                acc = user.id
-                uuid = null
-                profileData.email = user.email
-                profileData.nickName = user.name
-            } else if (account.provider === "line") {
-                // Line OAuth fallback
-                acc = user.id
-                uuid = null
-                profileData.nickName = user.name
+            // 手機登入也必須通過後端 API
+            if (account.provider === "credentials") {
+                // CredentialsProvider 的 authorize 已經調用後端 API
+                // 只需確保有返回資料
+                if (!user.accessToken) {
+                    console.error('Credentials login failed: no backend token')
+                    return false
+                }
             }
             
-            try {
-                await saveUserToDB(
-                    acc, 
-                    account.provider, 
-                    uuid,
-                    Object.keys(profileData).length > 0 ? profileData : null
-                )
-                return true
-            } catch (error) {
-                console.error('Failed to save user to DB:', error.message)
-                return false
-            }
+            return true
         },
         
         async session({ session, token }) {
@@ -236,20 +137,12 @@ export const authOptions = {
             session.accessToken = token.accessToken
             session.refreshToken = token.refreshToken
             
-            // 從資料庫取得用戶資料
-            const dbUser = await findUserInDB(token)
-            
-            if (dbUser) {
-                session.user = {
-                    ...dbUser,
-                    uuid: dbUser.uuid || token.uuid
-                }
-            } else {
-                session.user = {
-                    acc: token.acc,
-                    uuid: token.uuid,
-                    provider: token.provider
-                }
+            // 直接使用 token 中的遠端資料
+            session.user = {
+                id: token.userId,
+                acc: token.acc,
+                uuid: token.uuid,
+                provider: token.provider
             }
             
             return session
